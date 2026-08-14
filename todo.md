@@ -64,5 +64,5 @@
 - [x] Separate Sample from the private Workspace navigation and add a dedicated Sample area covering all demo clips, demo collections, and usage guidance.
 - [x] Update README and CLI documentation with projects, preview/deletion behavior, Sample separation, and safe local copy organization.
 - [x] Verify desktop/mobile workflows, database behavior, CLI confirmation behavior, and all tests.
-- [ ] Save a documented checkpoint for the projects, preview, Sample separation, and CLI organize update.
+- [x] Save a documented checkpoint for the projects, preview, Sample separation, and CLI organize update.
 - [ ] Create and push the confirmed private GitHub repository after all product changes are validated.
