@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getScopedLibrarySource } from "./librarySource";
+import { getMyLibraryPresentation, getScopedLibrarySource } from "./librarySource";
 
 describe("scoped library view source", () => {
   it("passes a newly uploaded personal clip through to the My Library view", () => {
@@ -16,5 +16,11 @@ describe("scoped library view source", () => {
 
     expect(sampleSource.clips).toEqual([sampleClip]);
     expect(personalSource).toMatchObject({ mode: "personal", isExpectedSource: false, clips: [] });
+  });
+
+  it("shows the post-upload confirmation only when refreshed personal data contains the new clip", () => {
+    const uploaded = { id: 333, fileName: "my-upload.mov" };
+    expect(getMyLibraryPresentation({ mode: "personal", clips: [uploaded] }, true)).toMatchObject({ clips: [uploaded], showUploadConfirmation: true });
+    expect(getMyLibraryPresentation({ mode: "sample", clips: [uploaded] }, true)).toMatchObject({ clips: [], showUploadConfirmation: false });
   });
 });

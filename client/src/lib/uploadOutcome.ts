@@ -36,3 +36,7 @@ export async function finalizeUploadCompletion({
   if (outcome.shouldOfferLibraryAction) await refreshPersonalFootage();
   return outcome;
 }
+
+export function getPostUploadDestination(outcome: { shouldAutoNavigate: boolean }) {
+  return outcome.shouldAutoNavigate ? "/my-library?uploaded=1" : null;
+}

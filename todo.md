@@ -39,7 +39,7 @@
 - [x] Define separate My Library and Sample Library routes, labels, and navigation destinations.
 - [x] Implement an authenticated My Library that displays only the current user’s clips and supports personal search and similarity.
 - [x] Route successful uploads to My Library and add an explicit personal-library empty state with upload guidance.
-- [ ] Verify Sample and My Library isolation, responsive navigation, upload visibility, tests, and a corrected checkpoint.
+- [x] Verify Sample and My Library isolation, responsive navigation, upload visibility, tests, and a corrected checkpoint.
 - [x] Keep mixed-upload failures visible and present an explicit My Library action instead of auto-navigating before all uploads succeed.
 - [x] Add focused coverage for successful upload completion, personal-query invalidation, and My Library visibility behavior.
 - [x] Extract and test the upload-success refresh policy for personal list, search, and similarity queries.
@@ -48,3 +48,9 @@
 - [x] Add an integration-style verification that a new personal clip is visible through My Library while Sample Library remains read-only demo data.
 - [x] Extract and test a My Library view-model that renders newly uploaded personal clips while preserving a separate sample-only source.
 - [x] Document the front-end personal-clip rendering verification before saving the My Library fix checkpoint.
+- [x] Extract and test the real upload-to-My-Library presentation flow, including query refresh and rendered personal-clip visibility.
+- [x] Record a focused post-upload verification showing My Library changes while the read-only Sample Library remains unchanged.
+- [ ] Save the final My Library post-upload handoff version after complete verification.
+- [x] Add component-level rendered-output tests for the upload confirmation and My Library versus Sample Library data presentation.
+- [x] Add a focused rendered-output verification for full-success and mixed-failure upload handoff states.
+- [x] Add rendered-output coverage for mixed upload results showing failed jobs remain visible alongside the explicit My Library action.

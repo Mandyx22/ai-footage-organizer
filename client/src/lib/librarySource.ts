@@ -10,3 +10,11 @@ export function getScopedLibrarySource<T>(response: LibraryResponse<T>, expected
     isExpectedSource,
   };
 }
+
+export function getMyLibraryPresentation<T>(response: LibraryResponse<T>, justUploaded = false) {
+  const source = getScopedLibrarySource(response, "personal");
+  return {
+    ...source,
+    showUploadConfirmation: justUploaded && source.clips.length > 0,
+  };
+}

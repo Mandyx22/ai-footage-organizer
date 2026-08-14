@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { finalizeUploadCompletion, getUploadOutcome, refreshPersonalFootageQueries } from "./uploadOutcome";
+import { finalizeUploadCompletion, getPostUploadDestination, getUploadOutcome, refreshPersonalFootageQueries } from "./uploadOutcome";
 
 describe("upload completion outcome", () => {
   it("auto-navigates only if every selected clip reaches My Library", () => {
@@ -34,5 +34,7 @@ describe("upload completion outcome", () => {
     expect(allSucceeded.shouldAutoNavigate).toBe(true);
     expect(mixedResult).toMatchObject({ shouldAutoNavigate: false, shouldOfferLibraryAction: true });
     expect(allFailed.shouldOfferLibraryAction).toBe(false);
+    expect(getPostUploadDestination(allSucceeded)).toBe("/my-library?uploaded=1");
+    expect(getPostUploadDestination(mixedResult)).toBeNull();
   });
 });
