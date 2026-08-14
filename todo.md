@@ -1,0 +1,21 @@
+# Project TODO
+
+- [x] Define the MVP data model for clips, structured metadata, collections, clip membership, and creative questions.
+- [x] Implement database schema and migration for the footage workspace.
+- [x] Build typed server procedures for library retrieval, metadata-backed semantic search, similar-shot ranking, collections, and creative guidance.
+- [x] Add a safe demo workspace containing clearly marked sample footage metadata so the product can be explored before personal uploads are analyzed.
+- [x] Implement an upload flow with drag-and-drop affordance, file-selection fallback, validation, progress states, and thumbnail preview placeholders.
+- [x] Connect upload processing to server-side AI metadata generation using structured JSON when an analyzable visual input is available.
+- [x] Build an elegant responsive application shell with focused library, collections, and Ask My Footage workflows.
+- [x] Build a footage grid with clip cards, duration, description, mood and shot-type tags, selection state, and contextual actions.
+- [x] Implement library filters, natural-language semantic search, and clear result explanations.
+- [x] Implement Find Similar with metadata similarity controls and ranked related clips.
+- [x] Implement named collections, selection-based saving, and AI-suggested thematic collections.
+- [x] Implement Ask My Footage with selected-clip context, creative response, loading state, and suggested starter prompts.
+- [x] Add unit tests for core ranking and server-side procedures.
+- [x] Produce a polished README with architecture, setup, privacy considerations, feature status, and open-source contribution guidance.
+- [x] Verify desktop and mobile rendering, run type checking/tests, and resolve discovered issues.
+- [ ] Save a documented, publish-ready project checkpoint.
+- [x] Add server-side procedure tests for search, similarity, thematic suggestions, collections, and Ask My Footage.
+- [x] Add explicit open-source contribution guidance and link it from the project README.
+- [x] Add mocked happy-path tests for collection creation, collection membership, and Ask My Footage responses.
