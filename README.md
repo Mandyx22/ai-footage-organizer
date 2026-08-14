@@ -15,6 +15,7 @@ Framefind is not a timeline editor or an automatic vlog generator. It helps crea
 | Find Similar | Ranked metadata similarity across color, lighting, mood, subject, composition, and camera motion. |
 | Collections | Named manual collections plus automatically derived thematic suggestions from the available footage metadata. |
 | Ask My Footage | Grounded creative guidance based only on the selected clips’ metadata. |
+| Framefind CLI | Local folder scanning, portable JSON indexes, natural-language retrieval, similar-shot ranking, and local creative planning from a terminal. |
 
 ## Product architecture
 
@@ -31,6 +32,8 @@ flowchart LR
   F --> J[Similarity · collections]
   F --> K[Ask My Footage]
   K --> L[Creative LLM response]
+  M[Terminal folder] --> N[Framefind CLI local index]
+  N --> O[Local search · similarity · planning]
 ```
 
 The system stores video bytes in object storage and keeps only storage keys, URLs, metadata, and collection relationships in the database. Model credentials remain server-side; browser code never receives a model key.
@@ -51,18 +54,33 @@ pnpm test
 
 The scaffold uses managed authentication, database, object storage, and server-side AI helpers. A local database connection and the platform-provided environment variables are therefore required for full upload and AI behavior.
 
+## Terminal workflow
+
+Framefind also works from a terminal for local-first folder indexing and retrieval:
+
+```bash
+pnpm framefind index ~/Movies/tokyo-trip --index ~/Movies/tokyo-trip/framefind.index.json
+pnpm framefind search "quiet blue night shots" --index ~/Movies/tokyo-trip/framefind.index.json
+pnpm framefind similar "night/wide-street.mp4" --by color --index ~/Movies/tokyo-trip/framefind.index.json
+```
+
+The default CLI workflow is local and does not upload footage. Optional representative-frame AI analysis requires explicit `--confirm-ai`, an `ffmpeg` installation, and a configured compatible endpoint. Read the [CLI guide](docs/CLI.md) for all commands, privacy boundaries, and web/CLI differences.
+
 ## Repository map
 
 | Path | Responsibility |
 | --- | --- |
-| `client/src/pages/Home.tsx` | Main Framefind workspace and interaction states. |
-| `client/src/index.css` | Typography, dark visual system, surface treatments, and interaction motion. |
+| `client/src/pages/` | Landing, Sample Library, Collections, Ask My Footage, and Documentation routes. |
+| `client/src/index.css` | Sketchbook visual system, paper surfaces, annotations, and interaction motion. |
+| `cli/framefind.mjs` | Terminal command entry point. |
+| `cli/framefind-core.mjs` | Portable local-folder index, retrieval, similarity, and planning logic. |
 | `server/footage.ts` | Footage types, sample workspace data, retrieval ranking, similarity, and thematic grouping. |
 | `server/routers.ts` | Typed procedures for retrieval, AI metadata analysis, collections, and creative guidance. |
 | `server/_core/index.ts` | Secure binary video-upload endpoint alongside the typed API middleware. |
 | `drizzle/schema.ts` | Persistent data model for clips, collections, and collection membership. |
 | `docs/PRD.md` | Product requirements and MVP acceptance criteria. |
 | `docs/COMPETITOR_SUMMARY.md` | Focused category context and differentiation thesis. |
+| `docs/CLI.md` | Terminal commands, local-index behavior, optional AI analysis, and privacy boundaries. |
 
 ## Privacy and prototype boundaries
 

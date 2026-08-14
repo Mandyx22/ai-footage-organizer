@@ -30,4 +30,9 @@
 - [x] Make sample content explicitly identifiable and ensure navigation makes its exploratory role clear.
 - [x] Verify the new page flow on desktop and mobile, run quality checks, and save a documented checkpoint.
 - [x] Verify Collections and Ask My Footage on mobile and record the responsive validation results.
-- [ ] Save the corrected information-architecture checkpoint after complete mobile verification.
+- [x] Save the corrected information-architecture checkpoint after complete mobile verification.
+- [x] Define the Framefind CLI commands, local index schema, supported file types, and privacy/analysis behavior.
+- [x] Implement a terminal CLI for local folder scanning, index creation, natural-language metadata search, similar-shot ranking, and creative planning.
+- [x] Add deterministic CLI fixtures and tests covering recursive scan, search, similarity, planning, and clear error behavior.
+- [x] Document terminal installation, commands, local-index ownership, optional visual analysis prerequisites, and integration with the web product.
+- [ ] Run CLI smoke tests and project quality checks, then save a documented checkpoint.
