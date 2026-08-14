@@ -28,4 +28,6 @@
 - [x] Create a Documentation center that explains the product workflow, feature purpose, feature status, and practical usage steps.
 - [x] Split the current all-in-one workspace into dedicated routes or tabs for Library, Collections, and Ask My Footage.
 - [x] Make sample content explicitly identifiable and ensure navigation makes its exploratory role clear.
-- [ ] Verify the new page flow on desktop and mobile, run quality checks, and save a documented checkpoint.
+- [x] Verify the new page flow on desktop and mobile, run quality checks, and save a documented checkpoint.
+- [x] Verify Collections and Ask My Footage on mobile and record the responsive validation results.
+- [ ] Save the corrected information-architecture checkpoint after complete mobile verification.

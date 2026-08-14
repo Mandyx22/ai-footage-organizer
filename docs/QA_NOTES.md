@@ -28,3 +28,7 @@ The revised theme retains a high-contrast ink-on-paper control system for filena
 | `/collections` | Pass | Collections are separated from the library grid and include a visible selected-clip working pile plus transparent AI grouping explanation. |
 | `/ask` | Pass | Creative questioning is a dedicated workspace with a visible clip-evidence pile and grounded-context explanation. |
 | `/docs` | Pass | Documentation gives a product overview, sample-mode explanation, feature-by-feature purpose and steps, privacy notes, and prototype boundaries. |
+
+### Mobile route verification
+
+Collections and Ask My Footage were additionally checked at a 390 px viewport. Collections keeps its action, working pile, collection cards, and suggestion explanation in a readable single-column sequence. Ask My Footage keeps its clip-evidence grid, context count, prompt surface, composer, and feature-boundary note visible without overlap. Together with the earlier Landing, Sample Library, and Documentation checks, all five primary routes have now been verified on mobile.
