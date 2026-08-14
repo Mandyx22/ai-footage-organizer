@@ -22,4 +22,10 @@
 - [x] Define a Sketch-inspired visual language for Framefind while retaining accessible contrast and clear hierarchy.
 - [x] Replace the cinematic dark surfaces with paper, pencil, hand-drawn border, note, and sketch-style interaction treatments.
 - [x] Adapt the footage cards, collections, focused-clip panel, dialogs, and Ask My Footage area to the Sketch theme.
-- [ ] Verify responsive Sketch styling, run quality checks, and save a new project checkpoint.
+- [x] Verify responsive Sketch styling, run quality checks, and save a new project checkpoint.
+- [x] Define a clear information architecture covering Landing, Sample Library, Upload, Collections, Ask My Footage, and Documentation.
+- [x] Build a Sketch-themed Landing Page with concise product explanation, slogan, sample-workspace link, and upload call to action.
+- [x] Create a Documentation center that explains the product workflow, feature purpose, feature status, and practical usage steps.
+- [x] Split the current all-in-one workspace into dedicated routes or tabs for Library, Collections, and Ask My Footage.
+- [x] Make sample content explicitly identifiable and ensure navigation makes its exploratory role clear.
+- [ ] Verify the new page flow on desktop and mobile, run quality checks, and save a documented checkpoint.

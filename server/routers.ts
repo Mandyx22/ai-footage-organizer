@@ -93,6 +93,12 @@ export const appRouter = router({
     }),
   }),
   footage: router({
+    sampleList: publicProcedure.query(() => ({ clips: DEMO_CLIPS, mode: "sample" as const })),
+    sampleSearch: publicProcedure.input(z.object({ query: z.string().trim().max(160) })).query(({ input }) => {
+      const ranked = rankFootage(DEMO_CLIPS, input.query);
+      return { clips: ranked.map(item => item.clip), scores: Object.fromEntries(ranked.map(item => [item.clip.id, item.score])), query: input.query, mode: "sample" as const };
+    }),
+    sampleSimilar: publicProcedure.input(z.object({ clipId: z.number().int(), dimension: z.enum(["all", "color", "mood", "lighting", "subject", "composition", "motion"]).default("all") })).query(({ input }) => ({ clips: rankSimilar(DEMO_CLIPS, input.clipId, input.dimension).map(item => item.clip), dimension: input.dimension, mode: "sample" as const })),
     list: publicProcedure.query(async ({ ctx }) => {
       const source = await clipsFor(ctx.user?.id);
       return { clips: source, mode: source === DEMO_CLIPS ? "sample" as const : "personal" as const };

@@ -11,6 +11,26 @@ function createPublicContext(): TrpcContext {
 }
 
 describe("footage router", () => {
+  it("returns a clearly marked, stable read-only sample library", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.footage.sampleList();
+
+    expect(result.mode).toBe("sample");
+    expect(result.clips).toHaveLength(8);
+    expect(result.clips.map(clip => clip.id)).toContain(104);
+  });
+
+  it("searches and finds similar clips within the isolated sample library", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const search = await caller.footage.sampleSearch({ query: "quiet blue night shots" });
+    const similar = await caller.footage.sampleSimilar({ clipId: 101, dimension: "color" });
+
+    expect(search.mode).toBe("sample");
+    expect(search.clips[0]?.id).toBe(104);
+    expect(similar.mode).toBe("sample");
+    expect(similar.clips.map(clip => clip.id)).not.toContain(101);
+  });
+
   it("returns explainable semantic-search results from the sample workspace", async () => {
     const caller = appRouter.createCaller(createPublicContext());
     const result = await caller.footage.search({ query: "quiet blue night shots" });

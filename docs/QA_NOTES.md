@@ -18,3 +18,13 @@ The interface was visually checked after type checking and unit tests passed. Fu
 | Mobile, 390 px | Pass | Search, actions, filter pills, single-column clip cards, collections, the focused-clip note, and the Ask My Footage surface remain visible without overlapping content. |
 
 The revised theme retains a high-contrast ink-on-paper control system for filenames and operational UI while reserving handwriting and wavy underlines for reflective, creator-facing moments.
+
+## Information Architecture Update
+
+| Route | Result | Notes |
+| --- | --- | --- |
+| `/` | Pass | Landing page states the product purpose, primary slogan, Sample entry, personal-upload entry, feature overview, workflow, and documentation call to action. |
+| `/library` | Pass | Sample Library is backed by dedicated read-only endpoints and carries persistent `Sample content · read-only · fictional clips` labeling, regardless of login state. |
+| `/collections` | Pass | Collections are separated from the library grid and include a visible selected-clip working pile plus transparent AI grouping explanation. |
+| `/ask` | Pass | Creative questioning is a dedicated workspace with a visible clip-evidence pile and grounded-context explanation. |
+| `/docs` | Pass | Documentation gives a product overview, sample-mode explanation, feature-by-feature purpose and steps, privacy notes, and prototype boundaries. |
