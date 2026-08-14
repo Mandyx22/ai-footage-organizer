@@ -32,3 +32,11 @@ The revised theme retains a high-contrast ink-on-paper control system for filena
 ### Mobile route verification
 
 Collections and Ask My Footage were additionally checked at a 390 px viewport. Collections keeps its action, working pile, collection cards, and suggestion explanation in a readable single-column sequence. Ask My Footage keeps its clip-evidence grid, context count, prompt surface, composer, and feature-boundary note visible without overlap. Together with the earlier Landing, Sample Library, and Documentation checks, all five primary routes have now been verified on mobile.
+
+## My Library isolation fix
+
+The dedicated `/my-library` route was checked on desktop and at a 390 px mobile viewport. It renders the authenticated workspace’s uploaded clips, carries a persistent `My Library · private workspace` label, and uses personal-only query endpoints for listing, searching, and finding similar clips. `/library` continues to show the separately labeled read-only fictional Sample Library. The responsive navigation exposes both destinations, and the upload flow now invalidates personal queries before taking a successful upload to My Library.
+
+The post-upload policy is covered by deterministic tests: after at least one successful media save, the uploader refreshes only `personalList`, `personalSearch`, and `personalSimilar`. A fully successful selection automatically opens My Library; a mixed selection remains in the upload dialog so its failed job is visible and exposes an explicit **Open My Library** action for the completed clips. The Sample Library uses distinct read-only endpoints and is not refreshed or replaced by this personal-upload policy.
+
+Both library pages now consume a strict front-end source view model. My Library accepts only responses marked `personal`, while Sample Library accepts only responses marked `sample`. The accompanying view-model tests confirm a new personal clip reaches the My Library rendering source and that the same sample response is discarded by My Library rather than appearing as a user upload.

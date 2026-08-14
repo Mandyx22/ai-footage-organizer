@@ -35,4 +35,16 @@
 - [x] Implement a terminal CLI for local folder scanning, index creation, natural-language metadata search, similar-shot ranking, and creative planning.
 - [x] Add deterministic CLI fixtures and tests covering recursive scan, search, similarity, planning, and clear error behavior.
 - [x] Document terminal installation, commands, local-index ownership, optional visual analysis prerequisites, and integration with the web product.
-- [ ] Run CLI smoke tests and project quality checks, then save a documented checkpoint.
+- [x] Run CLI smoke tests and project quality checks, then save a documented checkpoint.
+- [x] Define separate My Library and Sample Library routes, labels, and navigation destinations.
+- [x] Implement an authenticated My Library that displays only the current user’s clips and supports personal search and similarity.
+- [x] Route successful uploads to My Library and add an explicit personal-library empty state with upload guidance.
+- [ ] Verify Sample and My Library isolation, responsive navigation, upload visibility, tests, and a corrected checkpoint.
+- [x] Keep mixed-upload failures visible and present an explicit My Library action instead of auto-navigating before all uploads succeed.
+- [x] Add focused coverage for successful upload completion, personal-query invalidation, and My Library visibility behavior.
+- [x] Extract and test the upload-success refresh policy for personal list, search, and similarity queries.
+- [x] Verify and document the post-upload path from successful media save through personal-query refresh to My Library visibility, without altering Sample Library.
+- [x] Extract and test the upload completion orchestration that refreshes My Library and conditionally navigates only when every selected file succeeds.
+- [x] Add an integration-style verification that a new personal clip is visible through My Library while Sample Library remains read-only demo data.
+- [x] Extract and test a My Library view-model that renders newly uploaded personal clips while preserving a separate sample-only source.
+- [x] Document the front-end personal-clip rendering verification before saving the My Library fix checkpoint.

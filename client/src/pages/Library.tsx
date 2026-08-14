@@ -2,6 +2,7 @@ import { UploadFootageDialog } from "@/components/UploadFootageDialog";
 import { SketchShell } from "@/components/SketchShell";
 import { useFootageSelection } from "@/contexts/FootageSelectionContext";
 import { demoImages, formatDuration, gradients, matchReasons, type Clip } from "@/lib/footage";
+import { getScopedLibrarySource } from "@/lib/librarySource";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { Archive, Check, ChevronRight, FolderHeart, MoreHorizontal, Search, Sparkles, WandSparkles, X } from "lucide-react";
@@ -25,7 +26,8 @@ export default function Library() {
   const library = trpc.footage.sampleList.useQuery();
   const searched = trpc.footage.sampleSearch.useQuery(searchInput, { enabled: searchQuery.trim().length > 1 });
   const similar = trpc.footage.sampleSimilar.useQuery(similarInput, { enabled: Boolean(focusedClipId && showSimilar) });
-  const baseClips = (library.data?.clips ?? []) as Clip[];
+  const sampleSource = getScopedLibrarySource(library.data, "sample");
+  const baseClips = sampleSource.clips as Clip[];
   const derivedClips = showSimilar ? (similar.data?.clips ?? []) as Clip[] : searchQuery.trim().length > 1 ? (searched.data?.clips ?? []) as Clip[] : baseClips;
   const filterTerm = activeFilter === "All clips" ? "" : activeFilter;
   const visibleClips = filterTerm ? derivedClips.filter(clip => [clip.description, ...clip.subjects, ...clip.mood, ...clip.colors, clip.shotType, clip.cameraMotion].join(" ").toLowerCase().includes(filterTerm.toLowerCase())) : derivedClips;

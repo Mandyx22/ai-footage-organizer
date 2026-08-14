@@ -43,6 +43,32 @@ function createAuthenticatedContext(): TrpcContext {
 }
 
 describe("protected footage procedures", () => {
+  it("keeps My Library personal by returning no sample fallback when the user has no clips", async () => {
+    mocks.listClipsForUser.mockResolvedValue([]);
+    const caller = appRouter.createCaller(createAuthenticatedContext());
+
+    const result = await caller.footage.personalList();
+
+    expect(result).toEqual({ clips: [], mode: "personal" });
+    expect(mocks.listClipsForUser).toHaveBeenCalledWith(9);
+  });
+
+  it("returns the authenticated creator's uploaded clips through My Library", async () => {
+    mocks.listClipsForUser.mockResolvedValue([{ id: 333, userId: 9, fileName: "my-upload.mov", mimeType: "video/quicktime", sizeBytes: 128, durationMs: 1_200, status: "ready", storageKey: "clips/333.mov", mediaUrl: "/manus-storage/clips/333.mov", thumbnailUrl: null, description: "A quiet personal clip.", subjects: "[\"friend\"]", setting: "train", timeOfDay: "night", lighting: "[\"low light\"]", colors: "[\"blue\"]", moods: "[\"quiet\"]", shotType: "close", cameraMotion: "handheld", possibleUses: "[\"opening\"]", createdAt: new Date(), updatedAt: new Date() }]);
+    const caller = appRouter.createCaller(createAuthenticatedContext());
+
+    const result = await caller.footage.personalList();
+
+    expect(result.mode).toBe("personal");
+    expect(result.clips).toHaveLength(1);
+    expect(result.clips[0]).toMatchObject({ id: 333, fileName: "my-upload.mov", mood: ["quiet"] });
+
+    const sample = await caller.footage.sampleList();
+    expect(sample.mode).toBe("sample");
+    expect(sample.clips).toHaveLength(8);
+    expect(sample.clips.some(clip => clip.fileName === "my-upload.mov")).toBe(false);
+  });
+
   it("creates a collection and persists selected clip membership for its owner", async () => {
     mocks.createCollection.mockResolvedValue({ id: 77, userId: 9, name: "Night out", description: null, accent: "violet", isAiSuggested: false });
     mocks.addClipToCollection.mockResolvedValue(true);

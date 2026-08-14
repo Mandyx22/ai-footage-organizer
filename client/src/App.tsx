@@ -10,11 +10,13 @@ import Collections from "./pages/Collections";
 import Documentation from "./pages/Documentation";
 import Home from "./pages/Home";
 import Library from "./pages/Library";
+import MyLibrary from "./pages/MyLibrary";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/my-library" component={MyLibrary} />
       <Route path="/library" component={Library} />
       <Route path="/collections" component={Collections} />
       <Route path="/ask" component={AskFootage} />

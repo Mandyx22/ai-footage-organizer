@@ -99,6 +99,16 @@ export const appRouter = router({
       return { clips: ranked.map(item => item.clip), scores: Object.fromEntries(ranked.map(item => [item.clip.id, item.score])), query: input.query, mode: "sample" as const };
     }),
     sampleSimilar: publicProcedure.input(z.object({ clipId: z.number().int(), dimension: z.enum(["all", "color", "mood", "lighting", "subject", "composition", "motion"]).default("all") })).query(({ input }) => ({ clips: rankSimilar(DEMO_CLIPS, input.clipId, input.dimension).map(item => item.clip), dimension: input.dimension, mode: "sample" as const })),
+    personalList: protectedProcedure.query(async ({ ctx }) => ({ clips: (await db.listClipsForUser(ctx.user.id)).map(toFootageClip), mode: "personal" as const })),
+    personalSearch: protectedProcedure.input(z.object({ query: z.string().trim().max(160) })).query(async ({ ctx, input }) => {
+      const source = (await db.listClipsForUser(ctx.user.id)).map(toFootageClip);
+      const ranked = rankFootage(source, input.query);
+      return { clips: ranked.map(item => item.clip), scores: Object.fromEntries(ranked.map(item => [item.clip.id, item.score])), query: input.query, mode: "personal" as const };
+    }),
+    personalSimilar: protectedProcedure.input(z.object({ clipId: z.number().int(), dimension: z.enum(["all", "color", "mood", "lighting", "subject", "composition", "motion"]).default("all") })).query(async ({ ctx, input }) => {
+      const source = (await db.listClipsForUser(ctx.user.id)).map(toFootageClip);
+      return { clips: rankSimilar(source, input.clipId, input.dimension).map(item => item.clip), dimension: input.dimension, mode: "personal" as const };
+    }),
     list: publicProcedure.query(async ({ ctx }) => {
       const source = await clipsFor(ctx.user?.id);
       return { clips: source, mode: source === DEMO_CLIPS ? "sample" as const : "personal" as const };
