@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { execFile } from "node:child_process";
 import { readFile, unlink } from "node:fs/promises";
+import { createInterface } from "node:readline/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { buildLocalPlan, createIndex, findClip, rankClips, rankSimilar, readIndex, writeIndex } from "./framefind-core.mjs";
+import { buildCopyPlan, buildLocalPlan, createIndex, executeCopyPlan, findClip, rankClips, rankSimilar, readIndex, writeIndex } from "./framefind-core.mjs";
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_INDEX = "framefind.index.json";
@@ -21,11 +22,13 @@ Usage:
   pnpm framefind plan <brief> --select <clip-id,file,...> [--index <file>]
   pnpm framefind analyze <clip-id-or-file> --confirm-ai [--index <file>]
   pnpm framefind plan <brief> --select <clip-id,file,...> --ai --confirm-ai [--index <file>]
+  pnpm framefind organize [--index <file>] [--query <words>] [--to <new-folder>] [--select <clip-id,file,...>]
 
 Notes:
   • “index” reads video names, paths, sizes, and modified times locally. It never uploads a file.
   • “analyze --confirm-ai” sends one extracted representative frame to the configured LLM provider.
   • The index is an ordinary JSON file you own; use --index to keep it wherever you prefer.
+  • “organize” asks before it copies selected clips into a new folder. It never moves, renames, or deletes originals.
 `);
 }
 
@@ -45,6 +48,31 @@ function parseArgs(args) {
 function indexPath(flags) { return path.resolve(String(flags.index ?? DEFAULT_INDEX)); }
 function printClip(clip, suffix = "") { console.log(`• ${clip.id}${suffix}\n  ${clip.fileName}\n  ${clip.metadata?.description ?? "No local notes yet."}`); }
 function assertConfirm(flags) { if (flags["confirm-ai"] !== true) throw new Error("This optional command sends one representative frame or metadata to your configured LLM provider. Re-run with --confirm-ai to proceed."); }
+
+async function organizeClips(index, flags) {
+  const interactive = !flags.query || !flags.to || !flags.select || flags["confirm-copy"] !== true;
+  const terminal = interactive ? createInterface({ input: process.stdin, output: process.stdout }) : null;
+  try {
+    const query = String(flags.query ?? await terminal.question("What footage would you like to gather? ")).trim();
+    if (!query) throw new Error("Add a description of the material to organize.");
+    const ranked = rankClips(index.clips, query).slice(0, Number(flags.limit ?? 8));
+    if (!ranked.length) throw new Error(`No indexed footage matched “${query}”. Try another search or add AI notes.`);
+    console.log(`\nPossible matches for “${query}”\n`);
+    ranked.forEach((result, number) => console.log(`${number + 1}. ${result.clip.id} · ${result.clip.fileName}`));
+    const selectedInput = String(flags.select ?? await terminal.question("Copy all listed matches, or enter comma-separated clip IDs: ")).trim();
+    const identifiers = selectedInput.toLowerCase() === "all" ? ranked.map(result => result.clip.id) : selectedInput.split(",").map(value => value.trim()).filter(Boolean);
+    if (!identifiers.length) throw new Error("Choose at least one clip ID, or type all.");
+    const destination = String(flags.to ?? await terminal.question("New destination folder: ")).trim();
+    if (!destination) throw new Error("Choose a destination folder for the copies.");
+    const plan = buildCopyPlan(index, identifiers, destination);
+    console.log(`\nCopy preview · ${plan.items.length} clips · originals stay untouched\n`);
+    plan.items.forEach(item => console.log(`• ${item.fileName}\n  ${item.source}\n  → ${item.target}`));
+    const confirmed = flags["confirm-copy"] === true ? "COPY" : String(await terminal.question("\nType COPY to create these duplicates, or press Enter to cancel: ")).trim();
+    if (confirmed !== "COPY") throw new Error("No files were copied. Your originals and destination folder were left unchanged.");
+    await executeCopyPlan(plan);
+    console.log(`\nCopied ${plan.items.length} clip${plan.items.length === 1 ? "" : "s"} to ${plan.destination}. Originals were not changed.`);
+  } finally { terminal?.close(); }
+}
 
 async function probeDuration(filePath) {
   try { const { stdout } = await execFileAsync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", filePath], { timeout: 12_000 }); const duration = Number(stdout.trim()); return Number.isFinite(duration) ? Math.round(duration * 10) / 10 : null; } catch { return null; }
@@ -114,6 +142,7 @@ async function main() {
     console.log(`Indexed ${index.clips.length} video files locally.\nIndex: ${output}\n\nNext: framefind search "quiet blue night shots" --index ${output}`); return;
   }
   const index = await readIndex(indexPath(flags));
+  if (command === "organize") { await organizeClips(index, flags); return; }
   if (command === "list") { console.log(`Framefind local index · ${index.clips.length} clips · ${index.root}`); index.clips.forEach(clip => printClip(clip)); return; }
   if (command === "search") { const query = positionals.join(" "); if (!query) throw new Error("Add a query: framefind search \"quiet blue night shots\""); const limit = Math.max(1, Number(flags.limit ?? 8)); const results = rankClips(index.clips, query).slice(0, limit); console.log(`\nSearch: “${query}” · ${results.length} matches\n`); results.forEach(result => printClip(result.clip, `  [${result.score}] matches: ${result.matches.join(", ")}`)); return; }
   if (command === "similar") { const identifier = positionals[0]; if (!identifier) throw new Error("Choose a clip: framefind similar <clip-id-or-file>"); const dimension = String(flags.by ?? "all"); const results = rankSimilar(index.clips, identifier, dimension).slice(0, Number(flags.limit ?? 8)); console.log(`\nSimilar to ${identifier} by ${dimension}\n`); results.forEach(result => printClip(result.clip, `  [${result.score}]`)); return; }

@@ -44,3 +44,14 @@ Both library pages now consume a strict front-end source view model. My Library 
 On an all-successful upload selection, the upload desk now refreshes the personal queries and opens `/my-library?uploaded=1`. My Library reads the refreshed `personal` source and shows an in-context confirmation only when it contains personal clips. This makes the post-upload handoff explicit to the creator while preserving the independent Sample Library route and data source.
 
 The post-upload route was visually checked with the `uploaded=1` state. My Library visibly shows the private-workspace label, the success confirmation, and the user-owned clip cards. The Sample Library was checked alongside it and retained its `Sample content · read-only · fictional clips` label and demo imagery, with no personal-upload confirmation or personal clips present.
+
+## Editing Projects & Sample Separation Update
+
+| Surface | Result | Notes |
+| --- | --- | --- |
+| `/my-library`, desktop | Pass | The private Workspace presents an editing-project rail, loose-clip view, project-scoped upload action, clip project selector, removal action, and an original-media preview panel with play and scrub controls. |
+| `/sample`, desktop | Pass | The Sample Playground carries persistent public-demo labeling and a dedicated list of fictional sample collections; it does not link its selection into private Collections. |
+| `/collections`, desktop | Pass | Collections states that it contains private Workspace selections, directs users to My Projects for clips, and keeps sample content out of its data source. |
+| `/my-library`, `/sample`, `/collections`, 375 px | Pass | The project rail, sample cards, sample collection list, private collection desk, preview/removal controls, and scrollable compact navigation remain available without overlap. |
+
+The CLI `organize` flow was smoke-tested in a temporary folder. It indexed a local video placeholder, printed the proposed source and destination, copied only after the explicit confirmation flag, preserved the relative destination path, and left the source file byte-identical and in place.

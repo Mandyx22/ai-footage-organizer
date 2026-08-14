@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { buildLocalPlan, createIndex, rankClips, rankSimilar, scanFolder } from "./framefind-core.mjs";
+import { buildCopyPlan, buildLocalPlan, createIndex, executeCopyPlan, rankClips, rankSimilar, scanFolder } from "./framefind-core.mjs";
 
 const temporaryFolders: string[] = [];
 
@@ -37,5 +37,19 @@ describe("Framefind CLI core", () => {
   it("reports clear errors for unavailable folders and clips", async () => {
     await expect(scanFolder(path.join(os.tmpdir(), "framefind-folder-that-does-not-exist"))).rejects.toThrow("Folder not found");
     expect(() => rankSimilar([], "missing.mov", "all")).toThrow("Clip not found in index");
+  });
+
+  it("previews and copies selected clips into a new folder without changing originals", async () => {
+    const source = await mkdtemp(path.join(os.tmpdir(), "framefind-source-"));
+    const destination = await mkdtemp(path.join(os.tmpdir(), "framefind-destination-"));
+    temporaryFolders.push(source, destination);
+    const nested = path.join(source, "night", "quiet-blue.mov");
+    await writeFile(nested, "fixture").catch(async () => { await (await import("node:fs/promises")).mkdir(path.dirname(nested), { recursive: true }); await writeFile(nested, "fixture"); });
+    const index = await createIndex(source);
+    const plan = buildCopyPlan(index, [index.clips[0].id], destination);
+    await executeCopyPlan(plan);
+    expect(plan.items[0].target).toBe(path.join(destination, "night", "quiet-blue.mov"));
+    expect(await readFile(nested, "utf8")).toBe("fixture");
+    expect(await readFile(plan.items[0].target, "utf8")).toBe("fixture");
   });
 });

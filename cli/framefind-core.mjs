@@ -96,6 +96,28 @@ export async function readIndex(indexPath) {
   return index;
 }
 
+export function buildCopyPlan(index, identifiers, destinationFolder) {
+  if (!identifiers.length) throw new Error("Choose one or more indexed clips to organize.");
+  const destination = path.resolve(destinationFolder);
+  const selected = identifiers.map(identifier => findClip(index, identifier));
+  return {
+    destination,
+    items: selected.map(clip => ({ id: clip.id, fileName: clip.fileName, source: clip.path, target: path.join(destination, clip.relativePath) })),
+  };
+}
+
+export async function executeCopyPlan(plan) {
+  for (const item of plan.items) {
+    const exists = await fs.access(item.target).then(() => true).catch(() => false);
+    if (exists) throw new Error(`Copy stopped: target already exists: ${item.target}`);
+  }
+  for (const item of plan.items) {
+    await fs.mkdir(path.dirname(item.target), { recursive: true });
+    await fs.copyFile(item.source, item.target);
+  }
+  return plan;
+}
+
 function metadataValues(clip) {
   const metadata = clip.metadata ?? {};
   return [clip.fileName, clip.relativePath, metadata.description, metadata.setting, metadata.time, metadata.shotType, metadata.cameraMotion, ...(metadata.subjects ?? []), ...(metadata.lighting ?? []), ...(metadata.colors ?? []), ...(metadata.mood ?? []), ...(metadata.possibleUses ?? [])].map(value => String(value ?? "").toLowerCase());

@@ -99,14 +99,14 @@ export const appRouter = router({
       return { clips: ranked.map(item => item.clip), scores: Object.fromEntries(ranked.map(item => [item.clip.id, item.score])), query: input.query, mode: "sample" as const };
     }),
     sampleSimilar: publicProcedure.input(z.object({ clipId: z.number().int(), dimension: z.enum(["all", "color", "mood", "lighting", "subject", "composition", "motion"]).default("all") })).query(({ input }) => ({ clips: rankSimilar(DEMO_CLIPS, input.clipId, input.dimension).map(item => item.clip), dimension: input.dimension, mode: "sample" as const })),
-    personalList: protectedProcedure.query(async ({ ctx }) => ({ clips: (await db.listClipsForUser(ctx.user.id)).map(toFootageClip), mode: "personal" as const })),
-    personalSearch: protectedProcedure.input(z.object({ query: z.string().trim().max(160) })).query(async ({ ctx, input }) => {
-      const source = (await db.listClipsForUser(ctx.user.id)).map(toFootageClip);
+    personalList: protectedProcedure.input(z.object({ projectId: z.number().int().positive().nullable().optional() }).optional()).query(async ({ ctx, input }) => ({ clips: (await db.listClipsForUser(ctx.user.id, input?.projectId)).map(toFootageClip), mode: "personal" as const })),
+    personalSearch: protectedProcedure.input(z.object({ query: z.string().trim().max(160), projectId: z.number().int().positive().nullable().optional() })).query(async ({ ctx, input }) => {
+      const source = (await db.listClipsForUser(ctx.user.id, input.projectId)).map(toFootageClip);
       const ranked = rankFootage(source, input.query);
       return { clips: ranked.map(item => item.clip), scores: Object.fromEntries(ranked.map(item => [item.clip.id, item.score])), query: input.query, mode: "personal" as const };
     }),
-    personalSimilar: protectedProcedure.input(z.object({ clipId: z.number().int(), dimension: z.enum(["all", "color", "mood", "lighting", "subject", "composition", "motion"]).default("all") })).query(async ({ ctx, input }) => {
-      const source = (await db.listClipsForUser(ctx.user.id)).map(toFootageClip);
+    personalSimilar: protectedProcedure.input(z.object({ clipId: z.number().int(), projectId: z.number().int().positive().nullable().optional(), dimension: z.enum(["all", "color", "mood", "lighting", "subject", "composition", "motion"]).default("all") })).query(async ({ ctx, input }) => {
+      const source = (await db.listClipsForUser(ctx.user.id, input.projectId)).map(toFootageClip);
       return { clips: rankSimilar(source, input.clipId, input.dimension).map(item => item.clip), dimension: input.dimension, mode: "personal" as const };
     }),
     list: publicProcedure.query(async ({ ctx }) => {
@@ -127,8 +127,10 @@ export const appRouter = router({
       mimeType: z.string().min(1).max(100),
       sizeBytes: z.number().int().min(0).max(52_428_800),
       durationMs: z.number().int().min(0).max(21_600_000),
+      projectId: z.number().int().positive().nullable().optional(),
       previewDataUrl: z.string().startsWith("data:image/").max(8_000_000),
     })).mutation(async ({ ctx, input }) => {
+      if (input.projectId !== null && input.projectId !== undefined && !(await db.userOwnsEditingProject({ userId: ctx.user.id, projectId: input.projectId }))) throw new TRPCError({ code: "FORBIDDEN", message: "This editing project is not available in your workspace." });
       const metadata = await analyzeRepresentativeFrame(input);
       const match = input.previewDataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
       if (!match) throw new TRPCError({ code: "BAD_REQUEST", message: "Preview frame format is not supported." });
@@ -138,6 +140,16 @@ export const appRouter = router({
       const clip = await db.createAnalyzedClip({ ...input, userId: ctx.user.id, thumbnailKey: thumbnail.key, thumbnailUrl: thumbnail.url, metadata });
       if (!clip) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not create your footage record." });
       return { clip: toFootageClip(clip) };
+    }),
+    delete: protectedProcedure.input(z.object({ clipId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const success = await db.deleteClipForUser({ userId: ctx.user.id, clipId: input.clipId });
+      if (!success) throw new TRPCError({ code: "NOT_FOUND", message: "This uploaded clip is not available in your workspace." });
+      return { success };
+    }),
+    moveToProject: protectedProcedure.input(z.object({ clipId: z.number().int().positive(), projectId: z.number().int().positive().nullable() })).mutation(async ({ ctx, input }) => {
+      const success = await db.moveClipToEditingProject({ userId: ctx.user.id, ...input });
+      if (!success) throw new TRPCError({ code: "FORBIDDEN", message: "This clip or editing project is not available in your workspace." });
+      return { success };
     }),
     ask: publicProcedure.input(z.object({ question: z.string().trim().min(3).max(600), clipIds: z.array(z.number().int()).min(1).max(30) })).mutation(async ({ ctx, input }) => {
       const source = await clipsFor(ctx.user?.id);
@@ -156,7 +168,24 @@ export const appRouter = router({
       return { answer: typeof answer === "string" ? answer : "I could not form a suggestion from this selection." };
     }),
   }),
+  projects: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const [projects, allClips] = await Promise.all([db.listEditingProjectsForUser(ctx.user.id), db.listClipsForUser(ctx.user.id)]);
+      return { projects: projects.map(project => ({ ...project, clipCount: allClips.filter(clip => clip.projectId === project.id).length })), unassignedCount: allClips.filter(clip => clip.projectId === null).length };
+    }),
+    create: protectedProcedure.input(z.object({ name: z.string().trim().min(1).max(120), description: z.string().trim().max(500).optional(), accent: z.string().trim().max(30).optional() })).mutation(async ({ ctx, input }) => {
+      const project = await db.createEditingProject({ userId: ctx.user.id, ...input });
+      if (!project) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not create editing project." });
+      return project;
+    }),
+  }),
   collections: router({
+    sampleList: publicProcedure.query(() => ({ collections: demoCollections, mode: "sample" as const })),
+    personalList: protectedProcedure.query(async ({ ctx }) => {
+      const rows = await db.listCollectionsForUser(ctx.user.id);
+      return { collections: rows.map(row => ({ ...row, clipCount: 0 })), mode: "personal" as const };
+    }),
+    personalSuggestions: protectedProcedure.query(async ({ ctx }) => ({ collections: buildCollectionSuggestions((await db.listClipsForUser(ctx.user.id)).map(toFootageClip)), mode: "personal" as const })),
     list: publicProcedure.query(async ({ ctx }) => {
       if (!ctx.user) return { collections: demoCollections, mode: "sample" as const };
       const rows = await db.listCollectionsForUser(ctx.user.id);

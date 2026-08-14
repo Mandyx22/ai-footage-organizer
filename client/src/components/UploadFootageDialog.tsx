@@ -12,7 +12,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-export function UploadFootageDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function UploadFootageDialog({ open, onOpenChange, projectId = null }: { open: boolean; onOpenChange: (open: boolean) => void; projectId?: number | null }) {
   const { isAuthenticated } = useAuth();
   const [jobs, setJobs] = useState<UploadJob[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -33,7 +33,7 @@ export function UploadFootageDialog({ open, onOpenChange }: { open: boolean; onO
         if (file.size > 50 * 1024 * 1024) throw new Error("Prototype upload limit is 50 MB per clip.");
         const frame = await representativeFrame(file);
         setJobs(current => current.map(job => job.id === id ? { ...job, previewUrl: frame.previewDataUrl, progress: 22, state: "analyzing" } : job));
-        const analyzed = await analyzeFrame.mutateAsync({ fileName: file.name, mimeType: file.type || "video/mp4", sizeBytes: file.size, durationMs: frame.durationMs, previewDataUrl: frame.previewDataUrl });
+        const analyzed = await analyzeFrame.mutateAsync({ fileName: file.name, mimeType: file.type || "video/mp4", sizeBytes: file.size, durationMs: frame.durationMs, projectId, previewDataUrl: frame.previewDataUrl });
         setJobs(current => current.map(job => job.id === id ? { ...job, progress: 35, state: "uploading" } : job));
         await uploadRawVideo(analyzed.clip.id, file, progress => setJobs(current => current.map(job => job.id === id ? { ...job, progress: Math.max(35, progress), state: "uploading" } : job)));
         setJobs(current => current.map(job => job.id === id ? { ...job, progress: 100, state: "ready" } : job));

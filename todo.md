@@ -50,7 +50,19 @@
 - [x] Document the front-end personal-clip rendering verification before saving the My Library fix checkpoint.
 - [x] Extract and test the real upload-to-My-Library presentation flow, including query refresh and rendered personal-clip visibility.
 - [x] Record a focused post-upload verification showing My Library changes while the read-only Sample Library remains unchanged.
-- [ ] Save the final My Library post-upload handoff version after complete verification.
+- [x] Save the final My Library post-upload handoff version after complete verification.
 - [x] Add component-level rendered-output tests for the upload confirmation and My Library versus Sample Library data presentation.
 - [x] Add a focused rendered-output verification for full-success and mixed-failure upload handoff states.
 - [x] Add rendered-output coverage for mixed upload results showing failed jobs remain visible alongside the explicit My Library action.
+- [x] Confirm GitHub authorization and private-repository owner before any remote repository creation.
+- [x] Define editing projects, project membership, current-project selection, and the boundary between private Workspace and Sample.
+- [x] Add database schema, migration, server procedures, and tests for named editing projects and clip-to-project assignment.
+- [x] Rebuild My Library as a private Workspace organized by editing project, with a clear project selector and project-scoped clip browsing.
+- [x] Implement secure deletion of user-uploaded clips, including confirmation, storage cleanup, database cleanup, UI feedback, and tests.
+- [x] Add full-clip video preview with a play control, seekable progress bar, accessible playback controls, and graceful fallback states.
+- [x] Add a CLI organize command that asks for a destination, previews proposed copies, requires explicit confirmation, and never moves or deletes originals.
+- [x] Separate Sample from the private Workspace navigation and add a dedicated Sample area covering all demo clips, demo collections, and usage guidance.
+- [x] Update README and CLI documentation with projects, preview/deletion behavior, Sample separation, and safe local copy organization.
+- [x] Verify desktop/mobile workflows, database behavior, CLI confirmation behavior, and all tests.
+- [ ] Save a documented checkpoint for the projects, preview, Sample separation, and CLI organize update.
+- [ ] Create and push the confirmed private GitHub repository after all product changes are validated.

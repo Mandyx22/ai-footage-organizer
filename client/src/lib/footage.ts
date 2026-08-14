@@ -1,5 +1,6 @@
 export type Clip = {
   id: number;
+  projectId?: number | null;
   fileName: string;
   durationMs: number;
   thumbnailUrl: string | null;

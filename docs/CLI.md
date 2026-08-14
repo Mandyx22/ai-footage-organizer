@@ -6,7 +6,7 @@ The web product is designed for visual exploration. The CLI adds a local-first r
 
 ## What stays local
 
-The standard `index`, `list`, `search`, `similar`, and local `plan` commands read filenames, folder paths, file sizes, and modified times from your machine. They create an ordinary JSON index that belongs to you. They do **not** upload video bytes, call an AI service, or need login credentials.
+The standard `index`, `list`, `search`, `similar`, local `plan`, and `organize` commands read filenames, folder paths, file sizes, and modified times from your machine. They create an ordinary JSON index that belongs to you. They do **not** upload video bytes, call an AI service, or need login credentials.
 
 > The folder path itself can reveal private context. Keep the resulting index file somewhere you are comfortable storing its absolute paths and inferred labels.
 
@@ -35,9 +35,30 @@ The indexer scans folders recursively and recognizes `.mp4`, `.mov`, `.m4v`, `.w
 | `search <query>` | Ranks clips from local metadata and path-derived labels. | `pnpm framefind search "warm train window" --index ./trip.index.json` |
 | `similar <clip>` | Finds clips sharing a metadata dimension with a reference clip. | `pnpm framefind similar "day-1/blue-street.mov" --by color --index ./trip.index.json` |
 | `plan <brief>` | Produces a deterministic, local creative outline for selected clips. | `pnpm framefind plan "a reflective opening" --select "day-1/street.mov,day-1/rain.mov" --index ./trip.index.json` |
+| `organize` | Asks what footage to gather, previews duplicates in a destination folder, then copies only after clear confirmation. | `pnpm framefind organize --index ./trip.index.json` |
 | `analyze <clip>` | Optionally extracts one representative frame and asks a configured multimodal model for richer visual notes. | See **Optional AI analysis** below. |
 
 The `similar` command accepts `--by all`, `color`, `mood`, `lighting`, `subject`, `composition`, or `motion`. Add `--limit 5` to either `search` or `similar` when you want fewer results.
+
+## Safe local copy organization
+
+`organize` is intentionally separate from retrieval. It is the only standard CLI command that writes media files, and it **copies** selected clips into a new destination while preserving their indexed relative subfolders. It never moves, renames, deletes, or overwrites originals.
+
+```bash
+# Interactive: Framefind asks what to gather, which matching clips to copy,
+# and where the new folder should live.
+pnpm framefind organize --index ~/Movies/trip/framefind.index.json
+
+# Scripted use still requires explicit identifiers and the confirmation flag.
+pnpm framefind organize \
+  --index ~/Movies/trip/framefind.index.json \
+  --query "quiet blue night" \
+  --select "day-2/blue-street.mov,day-2/rain-detail.mov" \
+  --to ~/Movies/edits/tokyo-opening \
+  --confirm-copy
+```
+
+Before copying, the CLI prints every source and proposed target. In interactive use you must type `COPY`. If a target path already exists, Framefind stops before copying any file, rather than overwriting a prior export. The destination can be any local folder you own; this feature does not alter the web Workspace or synchronize to the browser product.
 
 ## Local creative planning
 
@@ -82,6 +103,7 @@ pnpm framefind plan "a reflective city opener" \
 | --- | --- |
 | Quickly search a local drive by filenames and folder language | CLI `index` + `search` |
 | Keep a portable local JSON inventory | CLI `index` |
+| Make a separate local edit folder without touching originals | CLI `organize` |
 | Add visual notes from a representative frame | CLI `analyze --confirm-ai` or the web upload flow |
 | Browse rich thumbnails, make collections, and use a visual selection interface | Web workspace |
 | Ask a creative question from a hand-picked visual group | Web **Ask My Footage** or CLI `plan` |
@@ -95,4 +117,4 @@ pnpm test
 pnpm framefind help
 ```
 
-The automated suite exercises recursive local indexing, path-derived labels, natural-language ranking, similar-shot ranking, and non-AI creative planning. For a manual smoke test, use an empty temporary folder with placeholder filenames; `index`, `search`, `similar`, and local `plan` do not need valid video bytes.
+The automated suite exercises recursive local indexing, path-derived labels, natural-language ranking, similar-shot ranking, local planning, and safe copy-plan execution. For a manual smoke test, use an empty temporary folder with placeholder filenames; `index`, `search`, `similar`, local `plan`, and `organize` do not need valid video bytes.

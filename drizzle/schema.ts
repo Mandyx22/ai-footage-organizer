@@ -29,11 +29,26 @@ export const clipStatus = mysqlEnum("clipStatus", [
   "failed",
 ]);
 
+export const editingProjects = mysqlTable(
+  "editingProjects",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    description: text("description"),
+    accent: varchar("accent", { length: 30 }).notNull().default("peach"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("editing_projects_user_created_idx").on(table.userId, table.createdAt)],
+);
+
 export const clips = mysqlTable(
   "clips",
   {
     id: int("id").autoincrement().primaryKey(),
     userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    projectId: int("projectId").references(() => editingProjects.id, { onDelete: "set null" }),
     clipKey: varchar("clipKey", { length: 32 }).notNull().unique(),
     fileName: varchar("fileName", { length: 255 }).notNull(),
     mimeType: varchar("mimeType", { length: 100 }).notNull(),
@@ -57,7 +72,7 @@ export const clips = mysqlTable(
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
-  table => [index("clips_user_created_idx").on(table.userId, table.createdAt), index("clips_user_status_idx").on(table.userId, table.status)],
+  table => [index("clips_user_created_idx").on(table.userId, table.createdAt), index("clips_user_status_idx").on(table.userId, table.status), index("clips_project_created_idx").on(table.projectId, table.createdAt)],
 );
 
 export const collections = mysqlTable(
@@ -92,3 +107,4 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Clip = typeof clips.$inferSelect;
 export type Collection = typeof collections.$inferSelect;
+export type EditingProject = typeof editingProjects.$inferSelect;

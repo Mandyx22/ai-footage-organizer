@@ -1,7 +1,7 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
-import { Clip, clips, collections, collectionClips, InsertUser, users } from "../drizzle/schema";
+import { Clip, clips, collections, collectionClips, editingProjects, InsertUser, users } from "../drizzle/schema";
 import type { ClipMetadata } from "./footage";
 import { ENV } from "./_core/env";
 
@@ -43,10 +43,15 @@ export async function getUserByOpenId(openId: string) {
   return result[0];
 }
 
-export async function listClipsForUser(userId: number) {
+export async function listClipsForUser(userId: number, projectId?: number | null) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(clips).where(eq(clips.userId, userId)).orderBy(desc(clips.createdAt));
+  const condition = projectId === undefined
+    ? eq(clips.userId, userId)
+    : projectId === null
+      ? and(eq(clips.userId, userId), isNull(clips.projectId))
+      : and(eq(clips.userId, userId), eq(clips.projectId, projectId));
+  return db.select().from(clips).where(condition).orderBy(desc(clips.createdAt));
 }
 
 export async function getClipById(id: number) {
@@ -58,6 +63,7 @@ export async function getClipById(id: number) {
 
 export async function createAnalyzedClip(input: {
   userId: number;
+  projectId?: number | null;
   fileName: string;
   mimeType: string;
   sizeBytes: number;
@@ -71,6 +77,7 @@ export async function createAnalyzedClip(input: {
   const clipKey = `clip_${nanoid(14)}`;
   await db.insert(clips).values({
     userId: input.userId,
+    projectId: input.projectId ?? null,
     clipKey,
     fileName: input.fileName,
     mimeType: input.mimeType,
@@ -99,6 +106,42 @@ export async function attachClipMedia(input: { clipId: number; userId: number; s
   if (!db) return undefined;
   await db.update(clips).set({ storageKey: input.storageKey, mediaUrl: input.mediaUrl, status: "ready" }).where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId)));
   return getClipById(input.clipId);
+}
+
+export async function deleteClipForUser(input: { clipId: number; userId: number }) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.delete(clips).where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId)));
+  return result[0].affectedRows > 0;
+}
+
+export async function listEditingProjectsForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(editingProjects).where(eq(editingProjects.userId, userId)).orderBy(desc(editingProjects.updatedAt));
+}
+
+export async function createEditingProject(input: { userId: number; name: string; description?: string; accent?: string }) {
+  const db = await getDb();
+  if (!db) return undefined;
+  await db.insert(editingProjects).values({ userId: input.userId, name: input.name, description: input.description ?? null, accent: input.accent ?? "peach" });
+  const rows = await listEditingProjectsForUser(input.userId);
+  return rows[0];
+}
+
+export async function userOwnsEditingProject(input: { userId: number; projectId: number }) {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db.select({ id: editingProjects.id }).from(editingProjects).where(and(eq(editingProjects.id, input.projectId), eq(editingProjects.userId, input.userId))).limit(1);
+  return Boolean(rows[0]);
+}
+
+export async function moveClipToEditingProject(input: { userId: number; clipId: number; projectId: number | null }) {
+  const db = await getDb();
+  if (!db) return false;
+  if (input.projectId !== null && !(await userOwnsEditingProject({ userId: input.userId, projectId: input.projectId }))) return false;
+  const result = await db.update(clips).set({ projectId: input.projectId }).where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId)));
+  return result[0].affectedRows > 0;
 }
 
 export async function listCollectionsForUser(userId: number) {

@@ -15,6 +15,7 @@ export type ClipMetadata = {
 
 export type FootageClip = ClipMetadata & {
   id: number;
+  projectId?: number | null;
   fileName: string;
   durationMs: number;
   thumbnailUrl: string | null;
@@ -162,6 +163,7 @@ function safeArray(value: string, fallback: string[] = []) {
 export function toFootageClip(clip: Clip): FootageClip {
   return {
     id: clip.id,
+    projectId: clip.projectId,
     fileName: clip.fileName,
     durationMs: clip.durationMs,
     thumbnailUrl: clip.thumbnailUrl,
