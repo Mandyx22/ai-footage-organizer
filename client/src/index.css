@@ -6,11 +6,11 @@
 @theme inline {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "DM Mono", ui-monospace, monospace;
-  --font-editorial: "Instrument Serif", Georgia, serif;
+  --font-hand: "Caveat", cursive;
   --radius-sm: calc(var(--radius) - 5px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 6px);
+  --radius-xl: calc(var(--radius) + 7px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -32,27 +32,27 @@
   --color-ring: var(--ring);
 }
 
-:root, .dark {
-  --radius: 1rem;
-  --background: oklch(0.112 0.015 285);
-  --foreground: oklch(0.93 0.01 90);
-  --card: oklch(0.157 0.017 285);
-  --card-foreground: oklch(0.93 0.01 90);
-  --popover: oklch(0.176 0.018 285);
-  --popover-foreground: oklch(0.93 0.01 90);
-  --primary: oklch(0.76 0.15 311);
-  --primary-foreground: oklch(0.17 0.025 300);
-  --secondary: oklch(0.22 0.018 285);
-  --secondary-foreground: oklch(0.83 0.012 90);
-  --muted: oklch(0.205 0.014 285);
-  --muted-foreground: oklch(0.67 0.018 285);
-  --accent: oklch(0.245 0.022 290);
-  --accent-foreground: oklch(0.94 0.01 90);
-  --destructive: oklch(0.7 0.19 25);
+:root {
+  --radius: 0.9rem;
+  --background: oklch(0.965 0.012 87);
+  --foreground: oklch(0.22 0.012 82);
+  --card: oklch(0.99 0.008 87);
+  --card-foreground: oklch(0.22 0.012 82);
+  --popover: oklch(0.99 0.008 87);
+  --popover-foreground: oklch(0.22 0.012 82);
+  --primary: oklch(0.73 0.11 41);
+  --primary-foreground: oklch(0.2 0.02 48);
+  --secondary: oklch(0.93 0.025 85);
+  --secondary-foreground: oklch(0.29 0.015 82);
+  --muted: oklch(0.91 0.014 86);
+  --muted-foreground: oklch(0.48 0.014 80);
+  --accent: oklch(0.9 0.045 150);
+  --accent-foreground: oklch(0.27 0.03 150);
+  --destructive: oklch(0.62 0.2 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.76 0.15 311);
+  --border: oklch(0.28 0.012 82 / 38%);
+  --input: oklch(0.28 0.012 82 / 26%);
+  --ring: oklch(0.67 0.12 41);
 }
 
 @layer base {
@@ -60,21 +60,42 @@
   html { background: var(--background); }
   body { @apply bg-background text-foreground; min-width: 320px; }
   button:not(:disabled), [role="button"]:not([aria-disabled="true"]), [type="button"]:not(:disabled), [type="submit"]:not(:disabled), a[href] { @apply cursor-pointer; }
-  ::selection { background: oklch(0.76 0.15 311 / 35%); }
+  ::selection { background: oklch(0.73 0.11 41 / 28%); }
 }
 
 @layer components {
-  .app-glow { background: radial-gradient(circle at 47% -20%, oklch(0.35 0.11 310 / 34%), transparent 36%), radial-gradient(circle at 96% 20%, oklch(0.30 0.08 210 / 20%), transparent 26%), var(--background); }
-  .glass-panel { background: linear-gradient(135deg, oklch(0.19 0.02 286 / 88%), oklch(0.145 0.017 285 / 91%)); border: 1px solid oklch(1 0 0 / 9%); box-shadow: 0 24px 80px oklch(0.02 0.02 285 / 25%); }
-  .film-grain { position: relative; overflow: hidden; }
-  .film-grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18; mix-blend-mode: soft-light; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.65'/%3E%3C/svg%3E"); }
-  .clip-card { transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), border-color 180ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 180ms cubic-bezier(0.23, 1, 0.32, 1); }
-  .clip-card:hover { transform: translateY(-4px); border-color: oklch(0.76 0.15 311 / 45%); box-shadow: 0 18px 35px oklch(0.02 0.02 285 / 30%); }
-  .clip-card:active, .pressable:active { transform: scale(.98); }
-  .font-editorial { font-family: var(--font-editorial); }
+  .app-glow {
+    background-color: #f7f3eb;
+    background-image: linear-gradient(rgba(74, 65, 53, .045) 1px, transparent 1px), linear-gradient(90deg, rgba(74, 65, 53, .035) 1px, transparent 1px), radial-gradient(circle at 72% 8%, rgba(253, 210, 144, .25), transparent 24%), radial-gradient(circle at 4% 72%, rgba(154, 201, 190, .16), transparent 24%);
+    background-size: 24px 24px, 24px 24px, auto, auto;
+  }
+  .paper-panel {
+    background: linear-gradient(135deg, rgba(255, 254, 249, .94), rgba(248, 242, 229, .94));
+    border: 1.5px solid rgba(42, 38, 31, .6);
+    box-shadow: 3px 3px 0 rgba(42, 38, 31, .13), 8px 10px 24px rgba(54, 46, 35, .08);
+  }
+  .paper-panel-soft { background: rgba(255, 253, 247, .78); border: 1.5px solid rgba(42, 38, 31, .38); }
+  .sketch-card {
+    transition: transform 160ms cubic-bezier(.23, 1, .32, 1), box-shadow 160ms cubic-bezier(.23, 1, .32, 1), background 160ms cubic-bezier(.23, 1, .32, 1);
+    box-shadow: 2px 2px 0 rgba(42, 38, 31, .13);
+  }
+  .sketch-card:hover { transform: rotate(-.45deg) translateY(-3px); box-shadow: 5px 6px 0 rgba(42, 38, 31, .16); }
+  .sketch-card:active, .pressable:active { transform: scale(.98); }
+  .sketch-outline { border: 1.5px solid rgba(42, 38, 31, .65); box-shadow: 2px 2px 0 rgba(42, 38, 31, .14); }
+  .tape { position: relative; }
+  .tape::before { content: ""; position: absolute; z-index: 2; width: 62px; height: 17px; left: 50%; top: -8px; transform: translateX(-50%) rotate(-2deg); background: rgba(250, 209, 134, .73); border-inline: 1px solid rgba(173, 133, 55, .14); }
+  .note-yellow { background: #fff3ba; }
+  .note-blue { background: #dcecf2; }
+  .note-pink { background: #f8dddd; }
+  .note-green { background: #dcefdc; }
+  .font-hand { font-family: var(--font-hand); }
+  .ink { color: #2c2922; }
+  .ink-muted { color: #686054; }
+  .scribble { text-decoration: underline; text-decoration-style: wavy; text-decoration-color: #e69275; text-underline-offset: 5px; }
+  .dash-line { border-style: dashed; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .reveal { animation: reveal .45s cubic-bezier(.23, 1, .32, 1) both; }
-  @keyframes reveal { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .reveal { animation: reveal .4s cubic-bezier(.23, 1, .32, 1) both; }
+  @keyframes reveal { from { opacity: 0; transform: translateY(9px) rotate(.2deg); } to { opacity: 1; transform: translateY(0) rotate(0); } }
 }

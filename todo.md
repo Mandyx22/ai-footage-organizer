@@ -15,7 +15,11 @@
 - [x] Add unit tests for core ranking and server-side procedures.
 - [x] Produce a polished README with architecture, setup, privacy considerations, feature status, and open-source contribution guidance.
 - [x] Verify desktop and mobile rendering, run type checking/tests, and resolve discovered issues.
-- [ ] Save a documented, publish-ready project checkpoint.
+- [x] Save a documented, publish-ready project checkpoint.
 - [x] Add server-side procedure tests for search, similarity, thematic suggestions, collections, and Ask My Footage.
 - [x] Add explicit open-source contribution guidance and link it from the project README.
 - [x] Add mocked happy-path tests for collection creation, collection membership, and Ask My Footage responses.
+- [x] Define a Sketch-inspired visual language for Framefind while retaining accessible contrast and clear hierarchy.
+- [x] Replace the cinematic dark surfaces with paper, pencil, hand-drawn border, note, and sketch-style interaction treatments.
+- [x] Adapt the footage cards, collections, focused-clip panel, dialogs, and Ask My Footage area to the Sketch theme.
+- [ ] Verify responsive Sketch styling, run quality checks, and save a new project checkpoint.
