@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
 const mocks = vi.hoisted(() => ({
@@ -6,8 +6,10 @@ const mocks = vi.hoisted(() => ({
   addClipToCollection: vi.fn(),
   createEditingProject: vi.fn(),
   deleteClipForUser: vi.fn(),
+  listCollectionClipCountsForUser: vi.fn(),
   listClipsForUser: vi.fn(),
   listEditingProjectsForUser: vi.fn(),
+  listCollectionsForUser: vi.fn(),
   listLLMModels: vi.fn(),
   moveClipToEditingProject: vi.fn(),
   invokeLLM: vi.fn(),
@@ -20,7 +22,8 @@ vi.mock("./db", () => ({
   deleteClipForUser: mocks.deleteClipForUser,
   listClipsForUser: mocks.listClipsForUser,
   listEditingProjectsForUser: mocks.listEditingProjectsForUser,
-  listCollectionsForUser: vi.fn(async () => []),
+  listCollectionClipCountsForUser: mocks.listCollectionClipCountsForUser,
+  listCollectionsForUser: mocks.listCollectionsForUser,
   moveClipToEditingProject: mocks.moveClipToEditingProject,
   createAnalyzedClip: vi.fn(),
 }));
@@ -51,6 +54,11 @@ function createAuthenticatedContext(): TrpcContext {
 }
 
 describe("protected footage procedures", () => {
+  beforeEach(() => {
+    mocks.listCollectionsForUser.mockResolvedValue([]);
+    mocks.listCollectionClipCountsForUser.mockResolvedValue([]);
+  });
+
   it("keeps My Library personal by returning no sample fallback when the user has no clips", async () => {
     mocks.listClipsForUser.mockResolvedValue([]);
     const caller = appRouter.createCaller(createAuthenticatedContext());
@@ -89,6 +97,24 @@ describe("protected footage procedures", () => {
     expect(mocks.createCollection).toHaveBeenCalledWith(expect.objectContaining({ userId: 9, name: "Night out" }));
     expect(membership).toEqual({ success: true });
     expect(mocks.addClipToCollection).toHaveBeenCalledWith({ userId: 9, collectionId: 77, clipId: 101 });
+  });
+
+  it("returns saved collection clip counts for the authenticated workspace", async () => {
+    mocks.listCollectionsForUser.mockResolvedValue([
+      { id: 77, userId: 9, name: "Night out", description: null, accent: "violet", isAiSuggested: false, createdAt: new Date(), updatedAt: new Date() },
+      { id: 78, userId: 9, name: "Loose ideas", description: null, accent: "amber", isAiSuggested: false, createdAt: new Date(), updatedAt: new Date() },
+    ]);
+    mocks.listCollectionClipCountsForUser.mockResolvedValue([{ collectionId: 77, clipCount: 3 }]);
+    const caller = appRouter.createCaller(createAuthenticatedContext());
+
+    const result = await caller.collections.personalList();
+
+    expect(result.mode).toBe("personal");
+    expect(result.collections).toEqual([
+      expect.objectContaining({ id: 77, clipCount: 3 }),
+      expect.objectContaining({ id: 78, clipCount: 0 }),
+    ]);
+    expect(mocks.listCollectionClipCountsForUser).toHaveBeenCalledWith(9);
   });
 
   it("creates editing projects and scopes their clip counts to the authenticated workspace", async () => {

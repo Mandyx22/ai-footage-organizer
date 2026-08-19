@@ -28,6 +28,12 @@ const demoCollections = [
   { id: -3, name: "Warm daylight", description: "Morning movement and golden details.", accent: "lime", isAiSuggested: false, clipCount: 2 },
 ];
 
+async function collectionsWithCounts(userId: number) {
+  const [rows, counts] = await Promise.all([db.listCollectionsForUser(userId), db.listCollectionClipCountsForUser(userId)]);
+  const countByCollection = new Map(counts.map(row => [row.collectionId, row.clipCount]));
+  return rows.map(row => ({ ...row, clipCount: countByCollection.get(row.id) ?? 0 }));
+}
+
 async function modelId(preferred: string, fallback: string) {
   const { data } = await listLLMModels();
   return data.find(model => model.id === preferred)?.id ?? data.find(model => model.id === fallback)?.id;
@@ -182,15 +188,15 @@ export const appRouter = router({
   collections: router({
     sampleList: publicProcedure.query(() => ({ collections: demoCollections, mode: "sample" as const })),
     personalList: protectedProcedure.query(async ({ ctx }) => {
-      const rows = await db.listCollectionsForUser(ctx.user.id);
-      return { collections: rows.map(row => ({ ...row, clipCount: 0 })), mode: "personal" as const };
+      const collections = await collectionsWithCounts(ctx.user.id);
+      return { collections, mode: "personal" as const };
     }),
     personalSuggestions: protectedProcedure.query(async ({ ctx }) => ({ collections: buildCollectionSuggestions((await db.listClipsForUser(ctx.user.id)).map(toFootageClip)), mode: "personal" as const })),
     list: publicProcedure.query(async ({ ctx }) => {
       if (!ctx.user) return { collections: demoCollections, mode: "sample" as const };
-      const rows = await db.listCollectionsForUser(ctx.user.id);
-      return rows.length
-        ? { collections: rows.map(row => ({ ...row, clipCount: 0 })), mode: "personal" as const }
+      const collections = await collectionsWithCounts(ctx.user.id);
+      return collections.length
+        ? { collections, mode: "personal" as const }
         : { collections: demoCollections, mode: "sample" as const };
     }),
     suggestions: publicProcedure.query(async ({ ctx }) => ({ collections: buildCollectionSuggestions(await clipsFor(ctx.user?.id)) })),

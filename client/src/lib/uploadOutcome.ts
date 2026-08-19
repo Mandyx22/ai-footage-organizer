@@ -23,6 +23,16 @@ export async function refreshPersonalFootageQueries(invalidate: {
   ]);
 }
 
+export async function discardFailedTemporaryClip(clipId: number | null, deleteClip: (clipId: number) => Promise<unknown>) {
+  if (!clipId) return false;
+  try {
+    await deleteClip(clipId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function finalizeUploadCompletion({
   total,
   succeeded,

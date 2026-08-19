@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import { Clip, clips, collections, collectionClips, editingProjects, InsertUser, users } from "../drizzle/schema";
@@ -148,6 +148,17 @@ export async function listCollectionsForUser(userId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(collections).where(eq(collections.userId, userId)).orderBy(desc(collections.createdAt));
+}
+
+export async function listCollectionClipCountsForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({ collectionId: collectionClips.collectionId, clipCount: count() })
+    .from(collectionClips)
+    .innerJoin(collections, eq(collections.id, collectionClips.collectionId))
+    .where(eq(collections.userId, userId))
+    .groupBy(collectionClips.collectionId);
 }
 
 export async function createCollection(input: { userId: number; name: string; description?: string; accent?: string; isAiSuggested?: boolean }) {
