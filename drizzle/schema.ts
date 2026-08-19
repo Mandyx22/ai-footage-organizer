@@ -58,7 +58,12 @@ export const clips = mysqlTable(
     mediaUrl: text("mediaUrl"),
     thumbnailKey: text("thumbnailKey"),
     thumbnailUrl: text("thumbnailUrl"),
-    status: clipStatus.notNull().default("uploading"),
+    status: mysqlEnum("clipStatus", [
+      "uploading",
+      "analyzing",
+      "ready",
+      "failed",
+    ]).notNull().default("uploading"),
     description: text("description").notNull(),
     subjects: text("subjects").notNull(),
     setting: varchar("setting", { length: 255 }).notNull(),
