@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { finalizeUploadCompletion, getPostUploadDestination, getUploadOutcome, refreshPersonalFootageQueries } from "./uploadOutcome";
+import { discardFailedTemporaryClip, finalizeUploadCompletion, getPostUploadDestination, getUploadOutcome, refreshPersonalFootageQueries } from "./uploadOutcome";
 
 describe("upload completion outcome", () => {
   it("auto-navigates only if every selected clip reaches My Library", () => {
@@ -36,5 +36,13 @@ describe("upload completion outcome", () => {
     expect(allFailed.shouldOfferLibraryAction).toBe(false);
     expect(getPostUploadDestination(allSucceeded)).toBe("/my-library?uploaded=1");
     expect(getPostUploadDestination(mixedResult)).toBeNull();
+  });
+
+  it("deletes an analyzed temporary clip after upload failure without masking the original error", async () => {
+    const remove = vi.fn(async () => undefined);
+    expect(await discardFailedTemporaryClip(32, remove)).toBe(true);
+    expect(remove).toHaveBeenCalledWith(32);
+    expect(await discardFailedTemporaryClip(null, remove)).toBe(false);
+    expect(await discardFailedTemporaryClip(44, async () => { throw new Error("already gone"); })).toBe(false);
   });
 });

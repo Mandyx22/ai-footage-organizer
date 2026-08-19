@@ -1,3 +1,5 @@
+import { COOKIE_NAME } from "@shared/const";
+
 export type Clip = {
   id: number;
   projectId?: number | null;
@@ -23,10 +25,20 @@ export type UploadJob = {
   id: string;
   fileName: string;
   progress: number;
-  state: "sampling" | "analyzing" | "uploading" | "ready" | "failed";
+  state: "queued" | "sampling" | "analyzing" | "uploading" | "ready" | "failed";
   previewUrl?: string;
   error?: string;
 };
+
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+export function getOversizeUploadError(fileName: string, sizeBytes: number) {
+  return `${fileName} is ${(sizeBytes / 1024 / 1024).toFixed(1)} MB. The prototype limit is 50 MB per clip; export a shorter or lower-resolution copy and try again.`;
+}
+
+export function createUploadQueue(files: Array<{ name: string }>, idFactory: () => string = () => crypto.randomUUID()): UploadJob[] {
+  return files.map(file => ({ id: idFactory(), fileName: file.name, progress: 0, state: "queued" }));
+}
 
 export const gradients = [
   "from-[#8eb4cc] via-[#bad0d2] to-[#f0d1a9]", "from-[#eac08a] via-[#f3dfa6] to-[#f8eece]",
@@ -41,6 +53,24 @@ export const demoImages: Record<number, string> = {
   103: "/manus-storage/framefind-ramen_0e83dd49.jpg",
   104: "/manus-storage/framefind-rain-street_6a24bf45.jpg",
 };
+
+export function hideBrokenImageElement(image: HTMLImageElement) {
+  image.style.display = "none";
+  image.setAttribute("aria-hidden", "true");
+}
+
+function sessionBearerHeaders() {
+  try {
+    const raw = sessionStorage.getItem("manus-cookie");
+    if (!raw) return {};
+    const prefix = `${COOKIE_NAME}=`;
+    const pair = raw.split(";").find(value => value.trim().startsWith(prefix));
+    const token = pair?.trim().slice(prefix.length);
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
 
 export function formatDuration(durationMs: number) {
   const seconds = Math.max(0, Math.round(durationMs / 1000));
@@ -81,15 +111,24 @@ export async function representativeFrame(file: File) {
   }
 }
 
-export function uploadRawVideo(clipId: number, file: File, onProgress: (value: number) => void) {
+export function uploadOriginalVideo(clipId: number, file: File, onProgress: (value: number) => void) {
   return new Promise<void>((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open("POST", `/api/footage/upload/${clipId}`);
-    request.setRequestHeader("Content-Type", file.type || "video/mp4");
-    request.setRequestHeader("x-file-name", encodeURIComponent(file.name));
+    request.timeout = 120_000;
+    const authHeaders = sessionBearerHeaders();
+    if (authHeaders.Authorization) request.setRequestHeader("Authorization", authHeaders.Authorization);
     request.upload.onprogress = event => event.lengthComputable && onProgress(Math.round((event.loaded / event.total) * 100));
-    request.onload = () => request.status >= 200 && request.status < 300 ? resolve() : reject(new Error("The video could not be saved."));
-    request.onerror = () => reject(new Error("The upload connection was interrupted."));
-    request.send(file);
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) { resolve(); return; }
+      let detail = "";
+      try { detail = JSON.parse(request.responseText)?.error ?? ""; } catch { detail = ""; }
+      reject(new Error(detail || `The video could not be saved (upload returned ${request.status}).`));
+    };
+    request.onerror = () => reject(new Error("The upload connection was interrupted before the video reached the server."));
+    request.ontimeout = () => reject(new Error("The upload took longer than two minutes. Please retry with a smaller video."));
+    const body = new FormData();
+    body.append("video", file, file.name);
+    request.send(body);
   });
 }
