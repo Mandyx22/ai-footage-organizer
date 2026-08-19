@@ -4,6 +4,7 @@ import type { TrpcContext } from "./_core/context";
 const mocks = vi.hoisted(() => ({
   createCollection: vi.fn(),
   addClipToCollection: vi.fn(),
+  createAnalyzedClip: vi.fn(),
   createEditingProject: vi.fn(),
   deleteClipForUser: vi.fn(),
   listCollectionClipCountsForUser: vi.fn(),
@@ -13,6 +14,8 @@ const mocks = vi.hoisted(() => ({
   listLLMModels: vi.fn(),
   moveClipToEditingProject: vi.fn(),
   invokeLLM: vi.fn(),
+  storagePut: vi.fn(),
+  userOwnsEditingProject: vi.fn(),
 }));
 
 vi.mock("./db", () => ({
@@ -25,12 +28,17 @@ vi.mock("./db", () => ({
   listCollectionClipCountsForUser: mocks.listCollectionClipCountsForUser,
   listCollectionsForUser: mocks.listCollectionsForUser,
   moveClipToEditingProject: mocks.moveClipToEditingProject,
-  createAnalyzedClip: vi.fn(),
+  createAnalyzedClip: mocks.createAnalyzedClip,
+  userOwnsEditingProject: mocks.userOwnsEditingProject,
 }));
 
 vi.mock("./_core/llm", () => ({
   listLLMModels: mocks.listLLMModels,
   invokeLLM: mocks.invokeLLM,
+}));
+
+vi.mock("./storage", () => ({
+  storagePut: mocks.storagePut,
 }));
 
 import { appRouter } from "./routers";
@@ -55,6 +63,7 @@ function createAuthenticatedContext(): TrpcContext {
 
 describe("protected footage procedures", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     mocks.listCollectionsForUser.mockResolvedValue([]);
     mocks.listCollectionClipCountsForUser.mockResolvedValue([]);
   });
@@ -141,6 +150,70 @@ describe("protected footage procedures", () => {
     await expect(caller.footage.delete({ clipId: 333 })).resolves.toEqual({ success: true });
     expect(mocks.moveClipToEditingProject).toHaveBeenCalledWith({ userId: 9, clipId: 333, projectId: 12 });
     expect(mocks.deleteClipForUser).toHaveBeenCalledWith({ userId: 9, clipId: 333 });
+  });
+
+  it("analyzes multiple sampled frames in chronological order while keeping the first frame as thumbnail", async () => {
+    const metadata = {
+      description: "a person walks through a neon street at night with a lively urban feel",
+      subjects: ["person", "street"],
+      setting: "city street",
+      time: "night",
+      lighting: ["neon"],
+      colors: ["blue", "magenta"],
+      mood: ["lively"],
+      shotType: "medium",
+      cameraMotion: "unknown",
+      possibleUses: ["night montage"],
+    };
+    mocks.listLLMModels.mockResolvedValue({ data: [{ id: "gemini-3-flash-preview" }] });
+    mocks.invokeLLM.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(metadata) } }] });
+    mocks.storagePut.mockResolvedValue({ key: "thumbs/sample.jpg", url: "/manus-storage/thumbs/sample.jpg" });
+    mocks.createAnalyzedClip.mockResolvedValue({
+      id: 444,
+      userId: 9,
+      projectId: null,
+      fileName: "night.mov",
+      mimeType: "video/quicktime",
+      sizeBytes: 128,
+      durationMs: 4_000,
+      status: "uploading",
+      storageKey: null,
+      mediaUrl: null,
+      thumbnailKey: "thumbs/sample.jpg",
+      thumbnailUrl: "/manus-storage/thumbs/sample.jpg",
+      description: metadata.description,
+      subjects: JSON.stringify(metadata.subjects),
+      setting: metadata.setting,
+      timeOfDay: metadata.time,
+      lighting: JSON.stringify(metadata.lighting),
+      colors: JSON.stringify(metadata.colors),
+      moods: JSON.stringify(metadata.mood),
+      shotType: metadata.shotType,
+      cameraMotion: metadata.cameraMotion,
+      possibleUses: JSON.stringify(metadata.possibleUses),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const caller = appRouter.createCaller(createAuthenticatedContext());
+
+    const result = await caller.footage.analyzeFrame({
+      fileName: "night.mov",
+      mimeType: "video/quicktime",
+      sizeBytes: 128,
+      durationMs: 4_000,
+      previewDataUrl: "data:image/jpeg;base64,first",
+      previewDataUrls: ["data:image/jpeg;base64,first", "data:image/jpeg;base64,second", "data:image/jpeg;base64,third"],
+    });
+
+    expect(result.clip).toMatchObject({ id: 444, description: metadata.description, cameraMotion: "unknown" });
+    expect(mocks.storagePut).toHaveBeenCalledWith(expect.stringContaining("night.mov.jpg"), expect.any(Buffer), "image/jpeg");
+    expect(mocks.createAnalyzedClip).toHaveBeenCalledWith(expect.objectContaining({ metadata, thumbnailUrl: "/manus-storage/thumbs/sample.jpg" }));
+    const messages = mocks.invokeLLM.mock.calls[0]?.[0]?.messages;
+    const serialized = JSON.stringify(messages);
+    expect(serialized).toContain("Frame 1 of 3");
+    expect(serialized).toContain("Frame 3 of 3");
+    expect(serialized).toContain("unknown");
+    expect(serialized).toContain("data:image/jpeg;base64,second");
   });
 
   it("returns a grounded creative answer when selected footage metadata is available", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createUploadQueue, getOversizeUploadError } from "./footage";
+import { createUploadQueue, getOversizeUploadError, representativeFrameTimes } from "./footage";
 
 describe("raw footage upload transport", () => {
   it("uses multipart form data on the application upload endpoint with a timeout", async () => {
@@ -46,5 +46,11 @@ describe("raw footage upload transport", () => {
       { id: "q-2", fileName: "second.mov", progress: 0, state: "queued" },
       { id: "q-3", fileName: "third.mov", progress: 0, state: "queued" },
     ]);
+  });
+
+  it("samples multiple chronological frames without seeking past the video end", () => {
+    expect(representativeFrameTimes(20)).toEqual([2, 7, 12, 17]);
+    expect(representativeFrameTimes(0.2)).toEqual([0.1]);
+    expect(representativeFrameTimes(1)).toEqual([0.1, 0.35, 0.6, 0.85]);
   });
 });

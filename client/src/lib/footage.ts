@@ -83,6 +83,32 @@ export function matchReasons(clip: Clip, query: string) {
   return terms.filter(term => metadata.some(value => value.toLowerCase().includes(term))).slice(0, 3);
 }
 
+export const REPRESENTATIVE_FRAME_RATIOS = [0.1, 0.35, 0.6, 0.85] as const;
+
+export function representativeFrameTimes(durationSeconds: number) {
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0.25) return [0.1];
+  const latestSafeTime = Math.max(durationSeconds - 0.1, 0.1);
+  const times = REPRESENTATIVE_FRAME_RATIOS.map(ratio => Math.min(Math.max(durationSeconds * ratio, 0.1), latestSafeTime));
+  return Array.from(new Map(times.map(time => [time.toFixed(3), time])).values());
+}
+
+async function seekVideo(video: HTMLVideoElement, time: number) {
+  await new Promise<void>((resolve, reject) => {
+    video.onseeked = () => resolve();
+    video.onerror = () => reject(new Error("The browser could not sample a frame."));
+    video.currentTime = time;
+  });
+}
+
+function captureVideoFrame(video: HTMLVideoElement) {
+  const ratio = Math.min(960 / video.videoWidth, 540 / video.videoHeight, 1);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(video.videoWidth * ratio));
+  canvas.height = Math.max(1, Math.round(video.videoHeight * ratio));
+  canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
 export async function representativeFrame(file: File) {
   const url = URL.createObjectURL(file);
   const video = document.createElement("video");
@@ -95,17 +121,12 @@ export async function representativeFrame(file: File) {
       video.onloadedmetadata = () => resolve();
       video.onerror = () => reject(new Error("The browser could not inspect this video."));
     });
-    video.currentTime = Math.min(Math.max(video.duration * 0.25, 0.1), Math.max(video.duration - 0.1, 0.1));
-    await new Promise<void>((resolve, reject) => {
-      video.onseeked = () => resolve();
-      video.onerror = () => reject(new Error("The browser could not sample a frame."));
-    });
-    const ratio = Math.min(960 / video.videoWidth, 540 / video.videoHeight, 1);
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(video.videoWidth * ratio));
-    canvas.height = Math.max(1, Math.round(video.videoHeight * ratio));
-    canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return { previewDataUrl: canvas.toDataURL("image/jpeg", 0.82), durationMs: Math.round(video.duration * 1000) };
+    const previewDataUrls: string[] = [];
+    for (const time of representativeFrameTimes(video.duration)) {
+      await seekVideo(video, time);
+      previewDataUrls.push(captureVideoFrame(video));
+    }
+    return { previewDataUrl: previewDataUrls[0], previewDataUrls, durationMs: Math.round(video.duration * 1000) };
   } finally {
     URL.revokeObjectURL(url);
   }
