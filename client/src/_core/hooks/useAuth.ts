@@ -23,7 +23,7 @@ export function useAuth(options?: UseAuthOptions) {
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
-      utils.auth.me.setData(undefined, null);
+      utils.auth.me.setData(undefined, undefined);
     },
   });
 
@@ -45,7 +45,7 @@ export function useAuth(options?: UseAuthOptions) {
       try {
         sessionStorage.removeItem("manus-cookie");
       } catch {}
-      utils.auth.me.setData(undefined, null);
+      utils.auth.me.setData(undefined, undefined);
       await utils.auth.me.invalidate();
     }
   }, [logoutMutation, utils]);
@@ -53,13 +53,21 @@ export function useAuth(options?: UseAuthOptions) {
   const state = useMemo(() => {
     localStorage.setItem(
       "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
+      JSON.stringify(meQuery.data?.user ?? null)
     );
+    const auth = meQuery.data?.auth ?? {
+      kind: "none" as const,
+      isAuthenticated: false,
+      hasWorkspaceIdentity: false,
+    };
     return {
-      user: meQuery.data ?? null,
+      user: meQuery.data?.user ?? null,
+      auth,
       loading: meQuery.isLoading || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
-      isAuthenticated: Boolean(meQuery.data),
+      isAuthenticated: auth.isAuthenticated,
+      hasWorkspaceIdentity: auth.hasWorkspaceIdentity,
+      isPrototype: auth.kind === "prototype",
     };
   }, [
     meQuery.data,
@@ -72,7 +80,7 @@ export function useAuth(options?: UseAuthOptions) {
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;
     if (meQuery.isLoading || logoutMutation.isPending) return;
-    if (state.user) return;
+    if (state.isAuthenticated) return;
     if (typeof window === "undefined") return;
     if (redirectPath && window.location.pathname === redirectPath) return;
 
@@ -87,7 +95,7 @@ export function useAuth(options?: UseAuthOptions) {
     redirectPath,
     logoutMutation.isPending,
     meQuery.isLoading,
-    state.user,
+    state.isAuthenticated,
   ]);
 
   return {

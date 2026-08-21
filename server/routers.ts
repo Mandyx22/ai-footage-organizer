@@ -95,7 +95,7 @@ async function analyzeRepresentativeFrame(input: { fileName: string; previewData
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(opts => ({ user: opts.ctx.user, auth: opts.ctx.auth })),
     logout: publicProcedure.mutation(({ ctx }) => {
       ctx.res.clearCookie(COOKIE_NAME, { ...getSessionCookieOptions(ctx.req), maxAge: -1 });
       return { success: true } as const;
