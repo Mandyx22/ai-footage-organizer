@@ -131,6 +131,10 @@ Completion criteria:
 
 - [ ] In a new browser session, a user can enter My Library without login and begin uploading footage.
 
+Implementation note:
+
+- The no-login MVP uses one persisted prototype user in the existing `users` table as a local / single-user prototype workspace identity. This is not production anonymous-user isolation.
+
 ### Milestone 2 - One real video end-to-end
 
 - [ ] Select a real video.

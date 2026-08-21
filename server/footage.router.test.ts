@@ -5,6 +5,11 @@ import type { TrpcContext } from "./_core/context";
 function createPublicContext(): TrpcContext {
   return {
     user: null,
+    auth: {
+      kind: "none",
+      isAuthenticated: false,
+      hasWorkspaceIdentity: false,
+    },
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: {} as TrpcContext["res"],
   };

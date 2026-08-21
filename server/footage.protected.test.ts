@@ -56,6 +56,11 @@ function createAuthenticatedContext(): TrpcContext {
       updatedAt: new Date(),
       lastSignedIn: new Date(),
     },
+    auth: {
+      kind: "authenticated",
+      isAuthenticated: true,
+      hasWorkspaceIdentity: true,
+    },
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: {} as TrpcContext["res"],
   };
