@@ -1,68 +1,208 @@
-# Project TODO
+# Framefind MVP Roadmap
 
-- [x] Define the MVP data model for clips, structured metadata, collections, clip membership, and creative questions.
-- [x] Implement database schema and migration for the footage workspace.
-- [x] Build typed server procedures for library retrieval, metadata-backed semantic search, similar-shot ranking, collections, and creative guidance.
-- [x] Add a safe demo workspace containing clearly marked sample footage metadata so the product can be explored before personal uploads are analyzed.
-- [x] Implement an upload flow with drag-and-drop affordance, file-selection fallback, validation, progress states, and thumbnail preview placeholders.
-- [x] Connect upload processing to server-side AI metadata generation using structured JSON when an analyzable visual input is available.
-- [x] Build an elegant responsive application shell with focused library, collections, and Ask My Footage workflows.
-- [x] Build a footage grid with clip cards, duration, description, mood and shot-type tags, selection state, and contextual actions.
-- [x] Implement library filters, natural-language semantic search, and clear result explanations.
-- [x] Implement Find Similar with metadata similarity controls and ranked related clips.
-- [x] Implement named collections, selection-based saving, and AI-suggested thematic collections.
-- [x] Implement Ask My Footage with selected-clip context, creative response, loading state, and suggested starter prompts.
-- [x] Add unit tests for core ranking and server-side procedures.
-- [x] Produce a polished README with architecture, setup, privacy considerations, feature status, and open-source contribution guidance.
-- [x] Verify desktop and mobile rendering, run type checking/tests, and resolve discovered issues.
-- [x] Save a documented, publish-ready project checkpoint.
-- [x] Add server-side procedure tests for search, similarity, thematic suggestions, collections, and Ask My Footage.
-- [x] Add explicit open-source contribution guidance and link it from the project README.
-- [x] Add mocked happy-path tests for collection creation, collection membership, and Ask My Footage responses.
-- [x] Define a Sketch-inspired visual language for Framefind while retaining accessible contrast and clear hierarchy.
-- [x] Replace the cinematic dark surfaces with paper, pencil, hand-drawn border, note, and sketch-style interaction treatments.
-- [x] Adapt the footage cards, collections, focused-clip panel, dialogs, and Ask My Footage area to the Sketch theme.
-- [x] Verify responsive Sketch styling, run quality checks, and save a new project checkpoint.
-- [x] Define a clear information architecture covering Landing, Sample Library, Upload, Collections, Ask My Footage, and Documentation.
-- [x] Build a Sketch-themed Landing Page with concise product explanation, slogan, sample-workspace link, and upload call to action.
-- [x] Create a Documentation center that explains the product workflow, feature purpose, feature status, and practical usage steps.
-- [x] Split the current all-in-one workspace into dedicated routes or tabs for Library, Collections, and Ask My Footage.
-- [x] Make sample content explicitly identifiable and ensure navigation makes its exploratory role clear.
-- [x] Verify the new page flow on desktop and mobile, run quality checks, and save a documented checkpoint.
-- [x] Verify Collections and Ask My Footage on mobile and record the responsive validation results.
-- [x] Save the corrected information-architecture checkpoint after complete mobile verification.
-- [x] Define the Framefind CLI commands, local index schema, supported file types, and privacy/analysis behavior.
-- [x] Implement a terminal CLI for local folder scanning, index creation, natural-language metadata search, similar-shot ranking, and creative planning.
-- [x] Add deterministic CLI fixtures and tests covering recursive scan, search, similarity, planning, and clear error behavior.
-- [x] Document terminal installation, commands, local-index ownership, optional visual analysis prerequisites, and integration with the web product.
-- [x] Run CLI smoke tests and project quality checks, then save a documented checkpoint.
-- [x] Define separate My Library and Sample Library routes, labels, and navigation destinations.
-- [x] Implement an authenticated My Library that displays only the current user’s clips and supports personal search and similarity.
-- [x] Route successful uploads to My Library and add an explicit personal-library empty state with upload guidance.
-- [x] Verify Sample and My Library isolation, responsive navigation, upload visibility, tests, and a corrected checkpoint.
-- [x] Keep mixed-upload failures visible and present an explicit My Library action instead of auto-navigating before all uploads succeed.
-- [x] Add focused coverage for successful upload completion, personal-query invalidation, and My Library visibility behavior.
-- [x] Extract and test the upload-success refresh policy for personal list, search, and similarity queries.
-- [x] Verify and document the post-upload path from successful media save through personal-query refresh to My Library visibility, without altering Sample Library.
-- [x] Extract and test the upload completion orchestration that refreshes My Library and conditionally navigates only when every selected file succeeds.
-- [x] Add an integration-style verification that a new personal clip is visible through My Library while Sample Library remains read-only demo data.
-- [x] Extract and test a My Library view-model that renders newly uploaded personal clips while preserving a separate sample-only source.
-- [x] Document the front-end personal-clip rendering verification before saving the My Library fix checkpoint.
-- [x] Extract and test the real upload-to-My-Library presentation flow, including query refresh and rendered personal-clip visibility.
-- [x] Record a focused post-upload verification showing My Library changes while the read-only Sample Library remains unchanged.
-- [x] Save the final My Library post-upload handoff version after complete verification.
-- [x] Add component-level rendered-output tests for the upload confirmation and My Library versus Sample Library data presentation.
-- [x] Add a focused rendered-output verification for full-success and mixed-failure upload handoff states.
-- [x] Add rendered-output coverage for mixed upload results showing failed jobs remain visible alongside the explicit My Library action.
-- [x] Confirm GitHub authorization and private-repository owner before any remote repository creation.
-- [x] Define editing projects, project membership, current-project selection, and the boundary between private Workspace and Sample.
-- [x] Add database schema, migration, server procedures, and tests for named editing projects and clip-to-project assignment.
-- [x] Rebuild My Library as a private Workspace organized by editing project, with a clear project selector and project-scoped clip browsing.
-- [x] Implement secure deletion of user-uploaded clips, including confirmation, storage cleanup, database cleanup, UI feedback, and tests.
-- [x] Add full-clip video preview with a play control, seekable progress bar, accessible playback controls, and graceful fallback states.
-- [x] Add a CLI organize command that asks for a destination, previews proposed copies, requires explicit confirmation, and never moves or deletes originals.
-- [x] Separate Sample from the private Workspace navigation and add a dedicated Sample area covering all demo clips, demo collections, and usage guidance.
-- [x] Update README and CLI documentation with projects, preview/deletion behavior, Sample separation, and safe local copy organization.
-- [x] Verify desktop/mobile workflows, database behavior, CLI confirmation behavior, and all tests.
-- [x] Save a documented checkpoint for the projects, preview, Sample separation, and CLI organize update.
-- [ ] Create and push the confirmed private GitHub repository after all product changes are validated.
+This file is the canonical project roadmap for the inherited Manus prototype.
+
+## Confirmed MVP architecture
+
+- [x] Keep React + Vite frontend.
+- [x] Keep Express backend.
+- [x] Keep tRPC as the main business API.
+- [x] Keep multipart HTTP endpoint for video binary upload.
+- [x] Keep Drizzle ORM.
+- [x] Keep current MySQL database.
+- [x] Keep object storage for videos and thumbnails.
+- [x] Keep browser-side multi-frame sampling.
+- [x] Keep current AI metadata pipeline.
+- [x] Do not require authentication for the product MVP workflow.
+- [x] Support a no-login / default workspace prototype mode.
+- [x] Do not delete the auth system while removing it from the core MVP path.
+- [x] Freeze CLI feature development for now.
+
+## Product direction
+
+Framefind helps creators understand, retrieve, organize, discover related footage, and get inspiration from their existing material.
+
+Framefind is not an AI editor that automatically generates final videos.
+
+Semantic retrieval is a later milestone. The product should eventually handle queries like "lonely but warm" by finding semantically related clips even when those exact words are not present in metadata. Embeddings and vector similarity are not part of Milestone 0.
+
+## Milestones
+
+### Milestone 0 - Stabilize inherited Manus project
+
+- [x] Check and resolve Drizzle schema / migration `status` vs `clipStatus` drift.
+- [x] Check current branch and uncommitted changes before implementation.
+- [x] Document current local run env / credential requirements.
+- [x] Confirm build / typecheck / tests.
+- [x] Avoid new product features.
+
+Completion criteria:
+
+- [x] Schema and migrations have no known mismatch.
+- [x] `pnpm check` passes.
+- [x] `pnpm test` passes.
+- [x] Project baseline is clearly recorded.
+- [x] No unrelated cleanup refactor.
+
+Baseline notes:
+
+- Current stabilization branch: `improve-multiframe-analysis`.
+- Existing uncommitted product work before Milestone 0: browser multi-frame sampling and AI prompt updates.
+- Required for real web ingest: `DATABASE_URL`, `BUILT_IN_FORGE_API_URL`, and `BUILT_IN_FORGE_API_KEY`.
+- Still required by the existing auth system until Milestone 1 removes auth from the core MVP path: `VITE_APP_ID`, `JWT_SECRET`, `OAUTH_SERVER_URL`, and optionally `OWNER_OPEN_ID`.
+- Manus / Forge dependencies remain in place. Provider replacement is explicitly out of scope for Milestone 0.
+
+### Milestone 1 - No-login prototype workspace
+
+- [ ] Add the smallest default/local workspace strategy.
+- [ ] Keep the existing auth architecture in place.
+- [ ] Make upload / analyze / save / library usable without Manus OAuth login.
+- [ ] Keep the change scoped.
+
+Completion criteria:
+
+- [ ] In a new browser session, a user can enter My Library without login and begin uploading footage.
+
+### Milestone 2 - One real video end-to-end
+
+- [ ] Select a real video.
+- [ ] Run browser multi-frame sampling.
+- [ ] Run AI metadata analysis.
+- [ ] Create DB clip record.
+- [ ] Store thumbnail.
+- [ ] Store original video in object storage.
+- [ ] Mark clip status `ready`.
+- [ ] Show clip in My Library.
+- [ ] Play the uploaded video in preview.
+
+Completion criteria:
+
+- [ ] A real video can be manually uploaded, analyzed, saved, displayed in My Library with metadata, and played back.
+
+### Milestone 3 - Metadata V2
+
+- [ ] Define structured clip metadata.
+- [ ] Distinguish AI-observed facts from AI-inferred fields and AI-suggested editing uses.
+- [ ] Include `visibleFacts`, `description`, `subjects`, `setting`, `time`, `lighting`, `mood`, `shotType`, `cameraMotion`, `editingUses`, and `uncertainty`.
+- [ ] Decide metadata persistence schema during this milestone.
+
+Completion criteria:
+
+- [ ] The metadata model clearly separates observed, inferred, and suggested information.
+
+### Milestone 4 - Search baseline
+
+- [ ] Stabilize existing metadata / natural-language retrieval.
+- [ ] Do not describe keyword / metadata matching as vector semantic search.
+- [ ] Improve ranking.
+- [ ] Add fixed fixture queries.
+- [ ] Return explainable match reasons.
+
+Completion criteria:
+
+- [ ] Metadata search behavior is predictable, tested, and honestly labeled.
+
+### Milestone 5 - Semantic Search with Embeddings
+
+- [ ] Generate embeddings from rich clip metadata.
+- [ ] Generate embeddings from user queries.
+- [ ] Use vector similarity to retrieve semantically related clips.
+- [ ] Combine metadata matching with embedding similarity.
+- [ ] Validate queries such as "lonely but warm" against clips that do not literally contain those words.
+
+Completion criteria:
+
+- [ ] Semantic / feeling-based retrieval works beyond exact metadata keyword overlap.
+
+### Milestone 6 - Find Similar V2
+
+- [ ] Combine metadata similarity with embedding similarity.
+- [ ] Improve similarity beyond exact field overlap.
+- [ ] Support theme, visual, and mood similarity.
+
+Completion criteria:
+
+- [ ] Find Similar returns footage that is meaningfully related, not only clips with identical metadata fields.
+
+### Milestone 7 - Collections
+
+- [ ] Create collections.
+- [ ] Add clips.
+- [ ] Open collection.
+- [ ] Browse collection clips.
+- [ ] Remove clips.
+- [ ] Preserve collection state after refresh.
+
+Completion criteria:
+
+- [ ] The collection workflow is complete and persistent.
+
+### Milestone 8 - Ask / Inspire
+
+- [ ] Let users ask about selected footage.
+- [ ] Let users request inspiration and editing direction.
+- [ ] Base AI answers primarily on generated rich metadata.
+- [ ] Do not imply the assistant re-watches the complete video for every answer.
+- [ ] Show which clips are selected.
+- [ ] Make clear which existing information the answer is based on.
+
+Completion criteria:
+
+- [ ] Ask / Inspire is grounded in selected footage metadata and communicates its evidence clearly.
+
+## Development workflow
+
+Every milestone follows this sequence:
+
+- [ ] Inspect.
+- [ ] Plan.
+- [ ] Approve architecture if necessary.
+- [ ] Implement bounded change.
+- [ ] Run.
+- [ ] Test.
+- [ ] Review diff.
+- [ ] Fix.
+- [ ] Commit.
+- [ ] Update this TODO.
+- [ ] Move to next milestone.
+
+Before coding, check:
+
+- [ ] `git status --short --branch`.
+- [ ] Current uncommitted changes.
+- [ ] Relevant frontend code.
+- [ ] Relevant API / backend code.
+- [ ] DB schema / migrations when data is involved.
+- [ ] Existing tests.
+- [ ] Required environment variables.
+
+After implementation, report:
+
+- [ ] Changed files.
+- [ ] What changed.
+- [ ] User-visible behavior.
+- [ ] Verification commands.
+- [ ] Test / build result.
+- [ ] Manual verification steps.
+- [ ] Remaining risks.
+- [ ] Env / migration / credential requirements.
+- [ ] TODO milestone status.
+
+Stop coding and discuss first if a task requires:
+
+- [ ] Core data model changes.
+- [ ] Database replacement.
+- [ ] AI / storage provider replacement.
+- [ ] Auth architecture deletion.
+- [ ] Queue or background worker introduction.
+- [ ] A diff much larger than one bounded feature.
+- [ ] Changes to more than about 10 files.
+- [ ] Work that conflicts with existing uncommitted changes.
+
+## Manus / Forge dependency strategy
+
+- [ ] Do not directly replace Manus / Forge yet.
+- [ ] Identify clear abstraction boundaries first.
+- [ ] Keep application logic separate from AI provider implementation.
+- [ ] Keep application logic separate from storage provider implementation.
+- [ ] Avoid large provider migrations until the core footage workflow is stable.

@@ -45,17 +45,20 @@ async function clipsFor(userId?: number | null): Promise<FootageClip[]> {
   return saved.length ? saved.map(toFootageClip) : DEMO_CLIPS;
 }
 
-async function analyzeRepresentativeFrame(input: { fileName: string; previewDataUrl: string }) {
+async function analyzeRepresentativeFrame(input: { fileName: string; previewDataUrls: string[] }) {
   const selectedModel = await modelId("gemini-3-flash-preview", "gpt-5-mini");
   const result = await invokeLLM({
     model: selectedModel,
     messages: [
-      { role: "system", content: "You analyze a single representative video frame for a personal footage library. Infer only what is visually supported. Return compact, searchable metadata in the exact schema. Use lower-case concise English tags; mood must be framed as a reasonable visual impression, not a fact." },
+      { role: "system", content: "You analyze several sampled frames from one video for a personal footage library. Treat frames as chronological evidence from the same clip. Infer only what is visually supported across the frames. Write description as one natural, searchable sentence of 12-24 words: visible content first, visual mood second only when supported. Use lower-case concise English tags for arrays. Use \"unknown\" for cameraMotion or other fields when the frames do not provide enough evidence. Do not overclaim identity, relationships, exact location, emotion, brand names, or events. Return only the exact JSON schema." },
       {
         role: "user",
         content: [
-          { type: "text", text: `Analyze this representative frame from ${input.fileName}.` },
-          { type: "image_url", image_url: { url: input.previewDataUrl, detail: "low" } },
+          { type: "text", text: `Analyze these ${input.previewDataUrls.length} sampled frames from ${input.fileName}. They are ordered from earlier to later in the clip.` },
+          ...input.previewDataUrls.flatMap((url, index) => [
+            { type: "text" as const, text: `Frame ${index + 1} of ${input.previewDataUrls.length}` },
+            { type: "image_url" as const, image_url: { url, detail: "low" as const } },
+          ]),
         ] as any,
       },
     ],
@@ -135,9 +138,10 @@ export const appRouter = router({
       durationMs: z.number().int().min(0).max(21_600_000),
       projectId: z.number().int().positive().nullable().optional(),
       previewDataUrl: z.string().startsWith("data:image/").max(8_000_000),
+      previewDataUrls: z.array(z.string().startsWith("data:image/").max(8_000_000)).min(1).max(5).optional(),
     })).mutation(async ({ ctx, input }) => {
       if (input.projectId !== null && input.projectId !== undefined && !(await db.userOwnsEditingProject({ userId: ctx.user.id, projectId: input.projectId }))) throw new TRPCError({ code: "FORBIDDEN", message: "This editing project is not available in your workspace." });
-      const metadata = await analyzeRepresentativeFrame(input);
+      const metadata = await analyzeRepresentativeFrame({ fileName: input.fileName, previewDataUrls: input.previewDataUrls?.length ? input.previewDataUrls : [input.previewDataUrl] });
       const match = input.previewDataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
       if (!match) throw new TRPCError({ code: "BAD_REQUEST", message: "Preview frame format is not supported." });
       const extension = match[1].includes("png") ? "png" : "jpg";
