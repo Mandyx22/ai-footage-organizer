@@ -66,6 +66,29 @@ function createAuthenticatedContext(): TrpcContext {
   };
 }
 
+function createPrototypeContext(): TrpcContext {
+  return {
+    user: {
+      id: 42,
+      openId: "framefind-prototype-workspace",
+      name: "Prototype Workspace",
+      email: null,
+      loginMethod: "prototype",
+      role: "user",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastSignedIn: new Date(),
+    },
+    auth: {
+      kind: "prototype",
+      isAuthenticated: false,
+      hasWorkspaceIdentity: true,
+    },
+    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    res: {} as TrpcContext["res"],
+  };
+}
+
 describe("protected footage procedures", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -97,6 +120,17 @@ describe("protected footage procedures", () => {
     expect(sample.mode).toBe("sample");
     expect(sample.clips).toHaveLength(8);
     expect(sample.clips.some(clip => clip.fileName === "my-upload.mov")).toBe(false);
+  });
+
+  it("returns prototype workspace clips through My Library without Manus authentication", async () => {
+    mocks.listClipsForUser.mockResolvedValue([{ id: 444, userId: 42, fileName: "prototype-upload.mov", mimeType: "video/quicktime", sizeBytes: 128, durationMs: 1_200, status: "ready", storageKey: "clips/444.mov", mediaUrl: "/manus-storage/clips/444.mov", thumbnailUrl: null, description: "A quiet prototype clip.", subjects: "[\"friend\"]", setting: "lake", timeOfDay: "sunset", lighting: "[\"warm light\"]", colors: "[\"gold\"]", moods: "[\"quiet\"]", shotType: "wide", cameraMotion: "static", possibleUses: "[\"memory montage\"]", createdAt: new Date(), updatedAt: new Date() }]);
+    const caller = appRouter.createCaller(createPrototypeContext());
+
+    const result = await caller.footage.personalList();
+
+    expect(result.mode).toBe("personal");
+    expect(result.clips[0]).toMatchObject({ id: 444, fileName: "prototype-upload.mov" });
+    expect(mocks.listClipsForUser).toHaveBeenCalledWith(42, undefined);
   });
 
   it("creates a collection and persists selected clip membership for its owner", async () => {
@@ -144,6 +178,29 @@ describe("protected footage procedures", () => {
     expect(mocks.createEditingProject).toHaveBeenCalledWith(expect.objectContaining({ userId: 9, name: "Taipei diary" }));
     expect(list.projects[0]).toMatchObject({ id: 12, clipCount: 1 });
     expect(list.unassignedCount).toBe(0);
+  });
+
+  it("scopes projects and collections to the prototype workspace user", async () => {
+    mocks.createEditingProject.mockResolvedValue({ id: 18, userId: 42, name: "Summer memory", description: null, accent: "peach" });
+    mocks.listEditingProjectsForUser.mockResolvedValue([{ id: 18, userId: 42, name: "Summer memory", description: null, accent: "peach", createdAt: new Date(), updatedAt: new Date() }]);
+    mocks.listClipsForUser.mockResolvedValue([{ id: 444, userId: 42, projectId: 18, fileName: "prototype-upload.mov" }]);
+    mocks.createCollection.mockResolvedValue({ id: 88, userId: 42, name: "Warm quiet", description: null, accent: "violet", isAiSuggested: false });
+    mocks.addClipToCollection.mockResolvedValue(true);
+    const caller = appRouter.createCaller(createPrototypeContext());
+
+    const project = await caller.projects.create({ name: "Summer memory" });
+    const projects = await caller.projects.list();
+    const collection = await caller.collections.create({ name: "Warm quiet" });
+    const membership = await caller.collections.addClip({ collectionId: 88, clipId: 444 });
+
+    expect(project).toMatchObject({ id: 18, userId: 42 });
+    expect(projects.projects[0]).toMatchObject({ id: 18, clipCount: 1 });
+    expect(collection).toMatchObject({ id: 88, userId: 42 });
+    expect(membership).toEqual({ success: true });
+    expect(mocks.createEditingProject).toHaveBeenCalledWith(expect.objectContaining({ userId: 42 }));
+    expect(mocks.listEditingProjectsForUser).toHaveBeenCalledWith(42);
+    expect(mocks.createCollection).toHaveBeenCalledWith(expect.objectContaining({ userId: 42 }));
+    expect(mocks.addClipToCollection).toHaveBeenCalledWith({ userId: 42, collectionId: 88, clipId: 444 });
   });
 
   it("moves and deletes only clips available in the authenticated workspace", async () => {
@@ -219,6 +276,63 @@ describe("protected footage procedures", () => {
     expect(serialized).toContain("Frame 3 of 3");
     expect(serialized).toContain("unknown");
     expect(serialized).toContain("data:image/jpeg;base64,second");
+  });
+
+  it("analyzes and creates clips in the prototype workspace without Manus authentication", async () => {
+    const metadata = {
+      description: "a quiet sunset lake clip with a reflective warm feeling",
+      subjects: ["lake"],
+      setting: "lakeside",
+      time: "sunset",
+      lighting: ["warm light"],
+      colors: ["gold"],
+      mood: ["reflective"],
+      shotType: "wide",
+      cameraMotion: "static",
+      possibleUses: ["closing moment"],
+    };
+    mocks.listLLMModels.mockResolvedValue({ data: [{ id: "gemini-3-flash-preview" }] });
+    mocks.invokeLLM.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(metadata) } }] });
+    mocks.storagePut.mockResolvedValue({ key: "thumbs/prototype.jpg", url: "/manus-storage/thumbs/prototype.jpg" });
+    mocks.createAnalyzedClip.mockResolvedValue({
+      id: 555,
+      userId: 42,
+      projectId: null,
+      fileName: "lake.mov",
+      mimeType: "video/quicktime",
+      sizeBytes: 128,
+      durationMs: 4_000,
+      status: "uploading",
+      storageKey: null,
+      mediaUrl: null,
+      thumbnailKey: "thumbs/prototype.jpg",
+      thumbnailUrl: "/manus-storage/thumbs/prototype.jpg",
+      description: metadata.description,
+      subjects: JSON.stringify(metadata.subjects),
+      setting: metadata.setting,
+      timeOfDay: metadata.time,
+      lighting: JSON.stringify(metadata.lighting),
+      colors: JSON.stringify(metadata.colors),
+      moods: JSON.stringify(metadata.mood),
+      shotType: metadata.shotType,
+      cameraMotion: metadata.cameraMotion,
+      possibleUses: JSON.stringify(metadata.possibleUses),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const caller = appRouter.createCaller(createPrototypeContext());
+
+    const result = await caller.footage.analyzeFrame({
+      fileName: "lake.mov",
+      mimeType: "video/quicktime",
+      sizeBytes: 128,
+      durationMs: 4_000,
+      previewDataUrl: "data:image/jpeg;base64,first",
+    });
+
+    expect(result.clip).toMatchObject({ id: 555, fileName: "lake.mov" });
+    expect(mocks.storagePut).toHaveBeenCalledWith(expect.stringContaining("framefind/42/thumbnails"), expect.any(Buffer), "image/jpeg");
+    expect(mocks.createAnalyzedClip).toHaveBeenCalledWith(expect.objectContaining({ userId: 42, metadata }));
   });
 
   it("returns a grounded creative answer when selected footage metadata is available", async () => {
