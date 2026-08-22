@@ -278,7 +278,7 @@ export default function MyLibrary() {
               </p>
             </section>
           ) : (
-            <section className="grid gap-6 xl:grid-cols-[230px_minmax(0,1fr)_310px]">
+            <section className="grid gap-6 xl:grid-cols-[230px_minmax(0,1fr)]">
               <aside className="paper-panel h-fit rounded-2xl p-3 xl:sticky xl:top-5">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="font-mono text-[10px] uppercase tracking-[.16em] ink-muted">
@@ -548,21 +548,6 @@ export default function MyLibrary() {
                   onClear={clearSelection}
                 />
               </div>
-              <aside className="space-y-5 xl:pt-2">
-                <Link
-                  href="/collections"
-                  className="note-pink block rotate-[.5deg] rounded-2xl border-[1.5px] border-[#2c2922]/48 p-4 shadow-[2px_2px_0_rgba(44,41,34,.12)]"
-                >
-                  <p className="font-hand text-xl font-bold">
-                    Ready to group them?
-                  </p>
-                  <p className="mt-1 text-xs leading-5 ink-muted">
-                    Collections are saved selections inside your Workspace. Open
-                    the collection desk{" "}
-                    <FolderHeart className="ml-1 inline size-3" />
-                  </p>
-                </Link>
-              </aside>
             </section>
           )}
         </div>
