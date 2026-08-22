@@ -1,8 +1,17 @@
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
-import { Clip, clips, collections, collectionClips, editingProjects, InsertUser, users, type User } from "../drizzle/schema";
-import type { ClipMetadata } from "./footage";
+import {
+  Clip,
+  clips,
+  collections,
+  collectionClips,
+  editingProjects,
+  InsertUser,
+  users,
+  type User,
+} from "../drizzle/schema";
+import { metadataV2ToLegacy, type ClipMetadataV2 } from "./footage";
 import { ENV } from "./_core/env";
 
 export const PROTOTYPE_USER_OPEN_ID = "framefind-prototype-workspace";
@@ -26,23 +35,36 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
   if (!db) return;
-  const values: InsertUser = { openId: user.openId, lastSignedIn: user.lastSignedIn ?? new Date() };
-  const updateSet: Record<string, unknown> = { lastSignedIn: values.lastSignedIn };
+  const values: InsertUser = {
+    openId: user.openId,
+    lastSignedIn: user.lastSignedIn ?? new Date(),
+  };
+  const updateSet: Record<string, unknown> = {
+    lastSignedIn: values.lastSignedIn,
+  };
   (["name", "email", "loginMethod"] as const).forEach(field => {
     if (user[field] !== undefined) {
       values[field] = user[field] ?? null;
       updateSet[field] = user[field] ?? null;
     }
   });
-  values.role = user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user");
+  values.role =
+    user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user");
   updateSet.role = values.role;
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  await db
+    .insert(users)
+    .values(values)
+    .onDuplicateKeyUpdate({ set: updateSet });
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.openId, openId))
+    .limit(1);
   return result[0];
 }
 
@@ -63,19 +85,27 @@ export async function getOrCreatePrototypeUser() {
     role: "user",
     lastSignedIn: new Date(),
   });
-  cachedPrototypeUser = await getUserByOpenId(PROTOTYPE_USER_OPEN_ID) ?? null;
+  cachedPrototypeUser = (await getUserByOpenId(PROTOTYPE_USER_OPEN_ID)) ?? null;
   return cachedPrototypeUser;
 }
 
-export async function listClipsForUser(userId: number, projectId?: number | null) {
+export async function listClipsForUser(
+  userId: number,
+  projectId?: number | null
+) {
   const db = await getDb();
   if (!db) return [];
-  const condition = projectId === undefined
-    ? eq(clips.userId, userId)
-    : projectId === null
-      ? and(eq(clips.userId, userId), isNull(clips.projectId))
-      : and(eq(clips.userId, userId), eq(clips.projectId, projectId));
-  return db.select().from(clips).where(condition).orderBy(desc(clips.createdAt));
+  const condition =
+    projectId === undefined
+      ? eq(clips.userId, userId)
+      : projectId === null
+        ? and(eq(clips.userId, userId), isNull(clips.projectId))
+        : and(eq(clips.userId, userId), eq(clips.projectId, projectId));
+  return db
+    .select()
+    .from(clips)
+    .where(condition)
+    .orderBy(desc(clips.createdAt));
 }
 
 export async function getClipById(id: number) {
@@ -94,11 +124,12 @@ export async function createAnalyzedClip(input: {
   durationMs: number;
   thumbnailKey: string;
   thumbnailUrl: string;
-  metadata: ClipMetadata;
+  metadata: ClipMetadataV2;
 }) {
   const db = await getDb();
   if (!db) return undefined;
   const clipKey = `clip_${nanoid(14)}`;
+  const legacyMetadata = metadataV2ToLegacy(input.metadata);
   await db.insert(clips).values({
     userId: input.userId,
     projectId: input.projectId ?? null,
@@ -110,68 +141,136 @@ export async function createAnalyzedClip(input: {
     thumbnailKey: input.thumbnailKey,
     thumbnailUrl: input.thumbnailUrl,
     status: "uploading",
-    description: input.metadata.description,
-    subjects: JSON.stringify(input.metadata.subjects),
-    setting: input.metadata.setting,
-    timeOfDay: input.metadata.time,
-    lighting: JSON.stringify(input.metadata.lighting),
-    colors: JSON.stringify(input.metadata.colors),
-    moods: JSON.stringify(input.metadata.mood),
-    shotType: input.metadata.shotType,
-    cameraMotion: input.metadata.cameraMotion,
-    possibleUses: JSON.stringify(input.metadata.possibleUses),
+    description: legacyMetadata.description,
+    subjects: JSON.stringify(legacyMetadata.subjects),
+    setting: legacyMetadata.setting,
+    timeOfDay: legacyMetadata.time,
+    lighting: JSON.stringify(legacyMetadata.lighting),
+    colors: JSON.stringify(legacyMetadata.colors),
+    moods: JSON.stringify(legacyMetadata.mood),
+    shotType: legacyMetadata.shotType,
+    cameraMotion: legacyMetadata.cameraMotion,
+    possibleUses: JSON.stringify(legacyMetadata.possibleUses),
+    metadataJson: input.metadata,
   });
-  const result = await db.select().from(clips).where(eq(clips.clipKey, clipKey)).limit(1);
+  const result = await db
+    .select()
+    .from(clips)
+    .where(eq(clips.clipKey, clipKey))
+    .limit(1);
   return result[0];
 }
 
-export async function attachClipMedia(input: { clipId: number; userId: number; storageKey: string; mediaUrl: string }) {
+export async function attachClipMedia(input: {
+  clipId: number;
+  userId: number;
+  storageKey: string;
+  mediaUrl: string;
+}) {
   const db = await getDb();
   if (!db) return undefined;
-  await db.update(clips).set({ storageKey: input.storageKey, mediaUrl: input.mediaUrl, status: "ready" }).where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId)));
+  await db
+    .update(clips)
+    .set({
+      storageKey: input.storageKey,
+      mediaUrl: input.mediaUrl,
+      status: "ready",
+    })
+    .where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId)));
   return getClipById(input.clipId);
 }
 
-export async function deleteClipForUser(input: { clipId: number; userId: number }) {
+export async function deleteClipForUser(input: {
+  clipId: number;
+  userId: number;
+}) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.delete(clips).where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId)));
+  const result = await db
+    .delete(clips)
+    .where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId)));
   return result[0].affectedRows > 0;
 }
 
 export async function listEditingProjectsForUser(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(editingProjects).where(eq(editingProjects.userId, userId)).orderBy(desc(editingProjects.updatedAt));
+  return db
+    .select()
+    .from(editingProjects)
+    .where(eq(editingProjects.userId, userId))
+    .orderBy(desc(editingProjects.updatedAt));
 }
 
-export async function createEditingProject(input: { userId: number; name: string; description?: string; accent?: string }) {
+export async function createEditingProject(input: {
+  userId: number;
+  name: string;
+  description?: string;
+  accent?: string;
+}) {
   const db = await getDb();
   if (!db) return undefined;
-  await db.insert(editingProjects).values({ userId: input.userId, name: input.name, description: input.description ?? null, accent: input.accent ?? "peach" });
+  await db
+    .insert(editingProjects)
+    .values({
+      userId: input.userId,
+      name: input.name,
+      description: input.description ?? null,
+      accent: input.accent ?? "peach",
+    });
   const rows = await listEditingProjectsForUser(input.userId);
   return rows[0];
 }
 
-export async function userOwnsEditingProject(input: { userId: number; projectId: number }) {
+export async function userOwnsEditingProject(input: {
+  userId: number;
+  projectId: number;
+}) {
   const db = await getDb();
   if (!db) return false;
-  const rows = await db.select({ id: editingProjects.id }).from(editingProjects).where(and(eq(editingProjects.id, input.projectId), eq(editingProjects.userId, input.userId))).limit(1);
+  const rows = await db
+    .select({ id: editingProjects.id })
+    .from(editingProjects)
+    .where(
+      and(
+        eq(editingProjects.id, input.projectId),
+        eq(editingProjects.userId, input.userId)
+      )
+    )
+    .limit(1);
   return Boolean(rows[0]);
 }
 
-export async function moveClipToEditingProject(input: { userId: number; clipId: number; projectId: number | null }) {
+export async function moveClipToEditingProject(input: {
+  userId: number;
+  clipId: number;
+  projectId: number | null;
+}) {
   const db = await getDb();
   if (!db) return false;
-  if (input.projectId !== null && !(await userOwnsEditingProject({ userId: input.userId, projectId: input.projectId }))) return false;
-  const result = await db.update(clips).set({ projectId: input.projectId }).where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId)));
+  if (
+    input.projectId !== null &&
+    !(await userOwnsEditingProject({
+      userId: input.userId,
+      projectId: input.projectId,
+    }))
+  )
+    return false;
+  const result = await db
+    .update(clips)
+    .set({ projectId: input.projectId })
+    .where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId)));
   return result[0].affectedRows > 0;
 }
 
 export async function listCollectionsForUser(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(collections).where(eq(collections.userId, userId)).orderBy(desc(collections.createdAt));
+  return db
+    .select()
+    .from(collections)
+    .where(eq(collections.userId, userId))
+    .orderBy(desc(collections.createdAt));
 }
 
 export async function listCollectionClipCountsForUser(userId: number) {
@@ -185,7 +284,13 @@ export async function listCollectionClipCountsForUser(userId: number) {
     .groupBy(collectionClips.collectionId);
 }
 
-export async function createCollection(input: { userId: number; name: string; description?: string; accent?: string; isAiSuggested?: boolean }) {
+export async function createCollection(input: {
+  userId: number;
+  name: string;
+  description?: string;
+  accent?: string;
+  isAiSuggested?: boolean;
+}) {
   const db = await getDb();
   if (!db) return undefined;
   await db.insert(collections).values({
@@ -199,13 +304,33 @@ export async function createCollection(input: { userId: number; name: string; de
   return rows[0];
 }
 
-export async function addClipToCollection(input: { userId: number; collectionId: number; clipId: number }) {
+export async function addClipToCollection(input: {
+  userId: number;
+  collectionId: number;
+  clipId: number;
+}) {
   const db = await getDb();
   if (!db) return false;
-  const ownedCollection = await db.select().from(collections).where(and(eq(collections.id, input.collectionId), eq(collections.userId, input.userId))).limit(1);
-  const ownedClip = await db.select().from(clips).where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId))).limit(1);
+  const ownedCollection = await db
+    .select()
+    .from(collections)
+    .where(
+      and(
+        eq(collections.id, input.collectionId),
+        eq(collections.userId, input.userId)
+      )
+    )
+    .limit(1);
+  const ownedClip = await db
+    .select()
+    .from(clips)
+    .where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId)))
+    .limit(1);
   if (!ownedCollection[0] || !ownedClip[0]) return false;
-  await db.insert(collectionClips).values({ collectionId: input.collectionId, clipId: input.clipId }).onDuplicateKeyUpdate({ set: { addedAt: new Date() } });
+  await db
+    .insert(collectionClips)
+    .values({ collectionId: input.collectionId, clipId: input.clipId })
+    .onDuplicateKeyUpdate({ set: { addedAt: new Date() } });
   return true;
 }
 

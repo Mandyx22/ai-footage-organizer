@@ -2,6 +2,7 @@ import {
   boolean,
   index,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   primaryKey,
@@ -33,22 +34,33 @@ export const editingProjects = mysqlTable(
   "editingProjects",
   {
     id: int("id").autoincrement().primaryKey(),
-    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    userId: int("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 120 }).notNull(),
     description: text("description"),
     accent: varchar("accent", { length: 30 }).notNull().default("peach"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
-  table => [index("editing_projects_user_created_idx").on(table.userId, table.createdAt)],
+  table => [
+    index("editing_projects_user_created_idx").on(
+      table.userId,
+      table.createdAt
+    ),
+  ]
 );
 
 export const clips = mysqlTable(
   "clips",
   {
     id: int("id").autoincrement().primaryKey(),
-    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-    projectId: int("projectId").references(() => editingProjects.id, { onDelete: "set null" }),
+    userId: int("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    projectId: int("projectId").references(() => editingProjects.id, {
+      onDelete: "set null",
+    }),
     clipKey: varchar("clipKey", { length: 32 }).notNull().unique(),
     fileName: varchar("fileName", { length: 255 }).notNull(),
     mimeType: varchar("mimeType", { length: 100 }).notNull(),
@@ -63,7 +75,9 @@ export const clips = mysqlTable(
       "analyzing",
       "ready",
       "failed",
-    ]).notNull().default("uploading"),
+    ])
+      .notNull()
+      .default("uploading"),
     description: text("description").notNull(),
     subjects: text("subjects").notNull(),
     setting: varchar("setting", { length: 255 }).notNull(),
@@ -74,17 +88,24 @@ export const clips = mysqlTable(
     shotType: varchar("shotType", { length: 80 }).notNull(),
     cameraMotion: varchar("cameraMotion", { length: 120 }).notNull(),
     possibleUses: text("possibleUses").notNull(),
+    metadataJson: json("metadataJson").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
-  table => [index("clips_user_created_idx").on(table.userId, table.createdAt), index("clips_user_status_idx").on(table.userId, table.status), index("clips_project_created_idx").on(table.projectId, table.createdAt)],
+  table => [
+    index("clips_user_created_idx").on(table.userId, table.createdAt),
+    index("clips_user_status_idx").on(table.userId, table.status),
+    index("clips_project_created_idx").on(table.projectId, table.createdAt),
+  ]
 );
 
 export const collections = mysqlTable(
   "collections",
   {
     id: int("id").autoincrement().primaryKey(),
-    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    userId: int("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 120 }).notNull(),
     description: text("description"),
     accent: varchar("accent", { length: 30 }).notNull().default("violet"),
@@ -92,20 +113,26 @@ export const collections = mysqlTable(
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
-  table => [index("collections_user_created_idx").on(table.userId, table.createdAt)],
+  table => [
+    index("collections_user_created_idx").on(table.userId, table.createdAt),
+  ]
 );
 
 export const collectionClips = mysqlTable(
   "collectionClips",
   {
-    collectionId: int("collectionId").notNull().references(() => collections.id, { onDelete: "cascade" }),
-    clipId: int("clipId").notNull().references(() => clips.id, { onDelete: "cascade" }),
+    collectionId: int("collectionId")
+      .notNull()
+      .references(() => collections.id, { onDelete: "cascade" }),
+    clipId: int("clipId")
+      .notNull()
+      .references(() => clips.id, { onDelete: "cascade" }),
     addedAt: timestamp("addedAt").defaultNow().notNull(),
   },
   table => [
     primaryKey({ columns: [table.collectionId, table.clipId] }),
     index("collection_clips_clip_idx").on(table.clipId),
-  ],
+  ]
 );
 
 export type User = typeof users.$inferSelect;
