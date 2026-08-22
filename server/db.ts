@@ -1,13 +1,14 @@
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
-import { Clip, clips, collections, collectionClips, editingProjects, InsertUser, users } from "../drizzle/schema";
+import { Clip, clips, collections, collectionClips, editingProjects, InsertUser, users, type User } from "../drizzle/schema";
 import type { ClipMetadata } from "./footage";
 import { ENV } from "./_core/env";
 
 export const PROTOTYPE_USER_OPEN_ID = "framefind-prototype-workspace";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let cachedPrototypeUser: User | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -46,6 +47,14 @@ export async function getUserByOpenId(openId: string) {
 }
 
 export async function getOrCreatePrototypeUser() {
+  if (cachedPrototypeUser) return cachedPrototypeUser;
+
+  const existing = await getUserByOpenId(PROTOTYPE_USER_OPEN_ID);
+  if (existing) {
+    cachedPrototypeUser = existing;
+    return existing;
+  }
+
   await upsertUser({
     openId: PROTOTYPE_USER_OPEN_ID,
     name: "Prototype Workspace",
@@ -54,7 +63,8 @@ export async function getOrCreatePrototypeUser() {
     role: "user",
     lastSignedIn: new Date(),
   });
-  return getUserByOpenId(PROTOTYPE_USER_OPEN_ID);
+  cachedPrototypeUser = await getUserByOpenId(PROTOTYPE_USER_OPEN_ID) ?? null;
+  return cachedPrototypeUser;
 }
 
 export async function listClipsForUser(userId: number, projectId?: number | null) {
