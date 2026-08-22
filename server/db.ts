@@ -5,6 +5,8 @@ import { Clip, clips, collections, collectionClips, editingProjects, InsertUser,
 import type { ClipMetadata } from "./footage";
 import { ENV } from "./_core/env";
 
+export const PROTOTYPE_USER_OPEN_ID = "framefind-prototype-workspace";
+
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
@@ -41,6 +43,18 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
+}
+
+export async function getOrCreatePrototypeUser() {
+  await upsertUser({
+    openId: PROTOTYPE_USER_OPEN_ID,
+    name: "Prototype Workspace",
+    email: null,
+    loginMethod: "prototype",
+    role: "user",
+    lastSignedIn: new Date(),
+  });
+  return getUserByOpenId(PROTOTYPE_USER_OPEN_ID);
 }
 
 export async function listClipsForUser(userId: number, projectId?: number | null) {

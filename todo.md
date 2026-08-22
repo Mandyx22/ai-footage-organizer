@@ -26,6 +26,74 @@ Framefind is not an AI editor that automatically generates final videos.
 
 Semantic retrieval is a later milestone. The product should eventually handle queries like "lonely but warm" by finding semantically related clips even when those exact words are not present in metadata. Embeddings and vector similarity are not part of Milestone 0.
 
+## Retrieval and RAG Architecture
+
+Embedding itself is not RAG.
+
+Framefind's future retrieval and generation architecture should keep two layers conceptually separate:
+
+- Retrieval Layer: find relevant clips from the user's existing footage.
+- Generation Layer: answer, inspire, or suggest editing direction based on the footage that retrieval selected.
+
+Embedding is a retrieval component. RAG is retrieval plus context construction plus LLM generation.
+
+Canonical future pipeline:
+
+```text
+Footage
+   ↓
+Multi-frame AI Analysis
+   ↓
+Rich Structured Metadata
+   ↓
+Canonical Searchable Representation
+   ↓
+Embeddings
+   ↓
+Retrieval Layer
+   ├── Metadata Search
+   ├── Semantic Search
+   └── Find Similar
+   ↓
+Relevant / Selected Clips
+   ↓
+RAG Context Builder
+   ↓
+LLM
+   ↓
+Ask / Inspire / Editing Direction
+```
+
+Search itself does not necessarily call an LLM. Find Similar itself does not necessarily call an LLM. Ask / Inspire is the primary future RAG application layer.
+
+Metadata and embeddings are not competing systems:
+
+- Metadata provides explainability, filtering, structured organization, and grounding for Ask / Inspire.
+- Embeddings provide fuzzy semantic retrieval, mood / concept similarity, and better recall for subjective queries.
+
+Future search should likely combine both:
+
+```text
+Metadata relevance
++
+Embedding semantic similarity
+↓
+Final ranking
+```
+
+Embeddings should add semantic recall without discarding structured metadata retrieval.
+
+Future multimodal expansion is not part of the MVP:
+
+```text
+Clip
+├── text metadata embedding
+├── visual/frame embedding
+└── transcript embedding
+```
+
+Later exploration may include visual embeddings, transcript embeddings, multimodal retrieval, reranking, vector databases, and background embedding workers. Do not introduce vector DB migration, separate image embedding architecture, transcript pipeline, reranking models, queues / background workers, or multimodal fusion in the first semantic retrieval version. The first semantic retrieval version should prioritize rich metadata -> text embedding.
+
 ## Milestones
 
 ### Milestone 0 - Stabilize inherited Manus project
@@ -63,6 +131,10 @@ Completion criteria:
 
 - [ ] In a new browser session, a user can enter My Library without login and begin uploading footage.
 
+Implementation note:
+
+- The no-login MVP uses one persisted prototype user in the existing `users` table as a local / single-user prototype workspace identity. This is not production anonymous-user isolation.
+
 ### Milestone 2 - One real video end-to-end
 
 - [ ] Select a real video.
@@ -90,11 +162,14 @@ Completion criteria:
 
 - [ ] The metadata model clearly separates observed, inferred, and suggested information.
 
-### Milestone 4 - Search baseline
+### Milestone 4 - Metadata / lexical retrieval baseline
 
-- [ ] Stabilize existing metadata / natural-language retrieval.
+- [ ] Stabilize metadata / lexical retrieval behavior.
+- [ ] Search across description, subjects, setting, lighting, colors, mood, shot type, camera motion, and editing uses / possible uses.
+- [ ] Use metadata / token / synonym matching during this milestone.
+- [ ] Do not introduce embeddings during this milestone.
 - [ ] Do not describe keyword / metadata matching as vector semantic search.
-- [ ] Improve ranking.
+- [ ] Improve explainable ranking.
 - [ ] Add fixed fixture queries.
 - [ ] Return explainable match reasons.
 
@@ -102,13 +177,73 @@ Completion criteria:
 
 - [ ] Metadata search behavior is predictable, tested, and honestly labeled.
 
-### Milestone 5 - Semantic Search with Embeddings
+### Milestone 5 - Semantic Retrieval with Embeddings
 
-- [ ] Generate embeddings from rich clip metadata.
+- [ ] Convert rich structured metadata into a canonical searchable text representation.
+- [ ] Generate clip embeddings from the canonical searchable text.
 - [ ] Generate embeddings from user queries.
-- [ ] Use vector similarity to retrieve semantically related clips.
-- [ ] Combine metadata matching with embedding similarity.
-- [ ] Validate queries such as "lonely but warm" against clips that do not literally contain those words.
+- [ ] Use vector similarity to retrieve semantic-nearest clips.
+- [ ] Preserve metadata retrieval and combine metadata relevance with embedding semantic similarity.
+- [ ] Keep V1 simple: rich metadata -> canonical text -> embedding model -> clip vector.
+- [ ] Do not start with complex multimodal vector architecture.
+- [ ] Validate subjective semantic queries against clips that do not literally contain the query words.
+
+V1 clip representation example:
+
+```text
+Description:
+A person sits alone beside a lake at sunset.
+
+Visible facts:
+person outdoors, lake, sunset
+
+Setting:
+lakeside
+
+Lighting:
+warm sunset light
+
+Mood:
+quiet, reflective, intimate
+
+Shot:
+medium-wide static shot
+
+Editing uses:
+memory montage, reflective transition, closing moment
+```
+
+V1 embedding flow:
+
+```text
+Rich metadata
+→ canonical text
+→ embedding model
+→ clip vector
+```
+
+User query flow:
+
+```text
+"lonely but warm"
+→ embedding model
+→ query vector
+```
+
+Canonical evaluation case:
+
+User searches:
+
+> 找一些让我感觉有点孤独但又很温暖的镜头
+
+Useful results might include:
+
+- sunset through train window
+- friend sitting alone by lake
+- empty cafe after dinner
+- streetlights through rainy windshield
+
+These should be retrievable even if the clip metadata does not directly contain "孤独" or "温暖". This is the product value semantic retrieval must add beyond keyword search. Evaluation should verify that embedding retrieval is useful, not merely that it can return any result.
 
 Completion criteria:
 
@@ -116,9 +251,11 @@ Completion criteria:
 
 ### Milestone 6 - Find Similar V2
 
-- [ ] Combine metadata similarity with embedding similarity.
+- [ ] Treat Find Similar as a retrieval application.
+- [ ] Start from the current baseline of subjects, mood, colors, setting, and related field overlap.
+- [ ] Upgrade ranking to combine metadata similarity with embedding similarity.
+- [ ] Support content similarity, visual / scene similarity, mood / atmosphere similarity, and potential editing-use similarity.
 - [ ] Improve similarity beyond exact field overlap.
-- [ ] Support theme, visual, and mood similarity.
 
 Completion criteria:
 
@@ -137,14 +274,40 @@ Completion criteria:
 
 - [ ] The collection workflow is complete and persistent.
 
-### Milestone 8 - Ask / Inspire
+### Milestone 8 - Ask / Inspire as RAG
 
-- [ ] Let users ask about selected footage.
+- [ ] Treat Ask / Inspire as the main RAG layer.
+- [ ] Let users ask about selected or retrieved footage.
 - [ ] Let users request inspiration and editing direction.
-- [ ] Base AI answers primarily on generated rich metadata.
+- [ ] Retrieve relevant clips, rank a bounded set, fetch their rich metadata, build grounded context, and pass that context to the LLM.
+- [ ] Base AI answers primarily on generated rich metadata and retrieved clip context.
 - [ ] Do not imply the assistant re-watches the complete video for every answer.
 - [ ] Show which clips are selected.
 - [ ] Make clear which existing information the answer is based on.
+
+Typical RAG pipeline:
+
+```text
+User question
+↓
+Retrieve relevant clips
+↓
+Select / rank a bounded set
+↓
+Fetch their rich metadata
+↓
+Build grounded context
+↓
+LLM
+↓
+Answer / Inspiration / Editing Direction
+```
+
+Example future request:
+
+> 从我的 footage 里找一些适合做一个安静夏日回忆 montage 的镜头，并告诉我怎么组织。
+
+The future system should use retrieval to find relevant clips, use metadata plus embedding ranking, select a bounded relevant clip set, build context from those clips' real metadata, provide the context plus question to the LLM, and generate grounded editing suggestions. The LLM should not pretend it saw video content that was not provided to it.
 
 Completion criteria:
 
