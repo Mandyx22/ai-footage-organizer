@@ -285,6 +285,108 @@ describe("protected footage procedures", () => {
     expect(mocks.invokeLLM).not.toHaveBeenCalled();
   });
 
+  it("normalizes a single-object array frame analysis response", async () => {
+    const metadata = {
+      description: "a person sits by a warm lake at sunset in a quiet reflective shot",
+      subjects: ["person", "lake"],
+      setting: "lakeside",
+      time: "sunset",
+      lighting: ["warm light"],
+      colors: ["gold"],
+      mood: ["quiet"],
+      shotType: "wide",
+      cameraMotion: "static",
+      possibleUses: ["memory montage"],
+    };
+    mocks.analyzeFrames.mockResolvedValue(JSON.stringify([metadata]));
+    mocks.storagePut.mockResolvedValue({ key: "thumbs/array.jpg", url: "/manus-storage/thumbs/array.jpg" });
+    mocks.createAnalyzedClip.mockImplementation(async input => ({
+      id: 556,
+      userId: input.userId,
+      projectId: null,
+      fileName: input.fileName,
+      mimeType: input.mimeType,
+      sizeBytes: input.sizeBytes,
+      durationMs: input.durationMs,
+      status: "uploading",
+      storageKey: null,
+      mediaUrl: null,
+      thumbnailKey: input.thumbnailKey,
+      thumbnailUrl: input.thumbnailUrl,
+      description: input.metadata.description,
+      subjects: JSON.stringify(input.metadata.subjects),
+      setting: input.metadata.setting,
+      timeOfDay: input.metadata.time,
+      lighting: JSON.stringify(input.metadata.lighting),
+      colors: JSON.stringify(input.metadata.colors),
+      moods: JSON.stringify(input.metadata.mood),
+      shotType: input.metadata.shotType,
+      cameraMotion: input.metadata.cameraMotion,
+      possibleUses: JSON.stringify(input.metadata.possibleUses),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    const caller = appRouter.createCaller(createPrototypeContext());
+
+    const result = await caller.footage.analyzeFrame({
+      fileName: "array.mov",
+      mimeType: "video/quicktime",
+      sizeBytes: 128,
+      durationMs: 4_000,
+      previewDataUrl: "data:image/jpeg;base64,first",
+    });
+
+    expect(result.clip).toMatchObject({ id: 556, description: metadata.description });
+    expect(mocks.createAnalyzedClip).toHaveBeenCalledWith(expect.objectContaining({ metadata }));
+  });
+
+  it("rejects multi-object array frame analysis responses", async () => {
+    const metadata = {
+      description: "a person sits by a warm lake at sunset in a quiet reflective shot",
+      subjects: ["person", "lake"],
+      setting: "lakeside",
+      time: "sunset",
+      lighting: ["warm light"],
+      colors: ["gold"],
+      mood: ["quiet"],
+      shotType: "wide",
+      cameraMotion: "static",
+      possibleUses: ["memory montage"],
+    };
+    mocks.analyzeFrames.mockResolvedValue(JSON.stringify([metadata, metadata]));
+    const caller = appRouter.createCaller(createAuthenticatedContext());
+
+    await expect(caller.footage.analyzeFrame({
+      fileName: "multi.mov",
+      mimeType: "video/quicktime",
+      sizeBytes: 128,
+      durationMs: 4_000,
+      previewDataUrl: "data:image/jpeg;base64,first",
+    })).rejects.toThrow("AI analysis metadata must be exactly one JSON object.");
+
+    expect(mocks.storagePut).not.toHaveBeenCalled();
+    expect(mocks.createAnalyzedClip).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["null", "null"],
+    ["primitive", "\"not an object\""],
+  ])("rejects %s frame analysis responses", async (_label, raw) => {
+    mocks.analyzeFrames.mockResolvedValue(raw);
+    const caller = appRouter.createCaller(createAuthenticatedContext());
+
+    await expect(caller.footage.analyzeFrame({
+      fileName: "bad.mov",
+      mimeType: "video/quicktime",
+      sizeBytes: 128,
+      durationMs: 4_000,
+      previewDataUrl: "data:image/jpeg;base64,first",
+    })).rejects.toThrow("AI analysis metadata must be exactly one JSON object.");
+
+    expect(mocks.storagePut).not.toHaveBeenCalled();
+    expect(mocks.createAnalyzedClip).not.toHaveBeenCalled();
+  });
+
   it("analyzes and creates clips in the prototype workspace without Manus authentication", async () => {
     const metadata = {
       description: "a quiet sunset lake clip with a reflective warm feeling",

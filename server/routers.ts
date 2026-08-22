@@ -29,7 +29,7 @@ const demoCollections = [
   { id: -3, name: "Warm daylight", description: "Morning movement and golden details.", accent: "lime", isAiSuggested: false, clipCount: 2 },
 ];
 
-const FRAME_ANALYSIS_SYSTEM_PROMPT = "You analyze several sampled frames from one video for a personal footage library. Treat frames as chronological evidence from the same clip. Infer only what is visually supported across the frames. Write description as one natural, searchable sentence of 12-24 words: visible content first, visual mood second only when supported. Use lower-case concise English tags for arrays. Use \"unknown\" for cameraMotion or other fields when the frames do not provide enough evidence. Do not overclaim identity, relationships, exact location, emotion, brand names, or events. Return only the exact JSON schema.";
+const FRAME_ANALYSIS_SYSTEM_PROMPT = "You analyze several sampled frames from one video for a personal footage library. The sampled frames are multiple views of one video clip, not separate clips. Return one combined clip-level analysis. Infer only what is visually supported across the frames. Write description as one natural, searchable sentence of 12-24 words: visible content first, visual mood second only when supported. Use lower-case concise English tags for arrays. Use \"unknown\" for cameraMotion or other fields when the frames do not provide enough evidence. Do not overclaim identity, relationships, exact location, emotion, brand names, or events. Return exactly one JSON object that matches the schema. Never return a top-level array.";
 
 const FRAME_ANALYSIS_RESPONSE_SCHEMA = {
   name: "footage_metadata",
@@ -70,6 +70,29 @@ async function clipsFor(userId?: number | null): Promise<FootageClip[]> {
   return saved.length ? saved.map(toFootageClip) : DEMO_CLIPS;
 }
 
+function parseFrameAnalysisMetadata(raw: string): ClipMetadata {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new TRPCError({ code: "BAD_GATEWAY", message: "AI analysis returned malformed JSON metadata." });
+  }
+
+  const candidate = Array.isArray(parsed)
+    ? parsed.length === 1 && typeof parsed[0] === "object" && parsed[0] !== null && !Array.isArray(parsed[0])
+      ? parsed[0]
+      : undefined
+    : typeof parsed === "object" && parsed !== null
+      ? parsed
+      : undefined;
+
+  if (!candidate) {
+    throw new TRPCError({ code: "BAD_GATEWAY", message: "AI analysis metadata must be exactly one JSON object." });
+  }
+
+  return metadataSchema.parse(candidate) as ClipMetadata;
+}
+
 async function analyzeRepresentativeFrame(input: { fileName: string; previewDataUrls: string[] }) {
   const raw = await getFrameAnalysisProvider().analyzeFrames({
     fileName: input.fileName,
@@ -78,7 +101,7 @@ async function analyzeRepresentativeFrame(input: { fileName: string; previewData
     responseSchema: FRAME_ANALYSIS_RESPONSE_SCHEMA,
   });
   if (typeof raw !== "string" || !raw) throw new TRPCError({ code: "BAD_GATEWAY", message: "AI analysis returned no metadata." });
-  return metadataSchema.parse(JSON.parse(raw)) as ClipMetadata;
+  return parseFrameAnalysisMetadata(raw);
 }
 
 export const appRouter = router({
