@@ -28,6 +28,8 @@ const demoCollections = [
   { id: -3, name: "Warm daylight", description: "Morning movement and golden details.", accent: "lime", isAiSuggested: false, clipCount: 2 },
 ];
 
+const OPENAI_FRAME_ANALYSIS_MODEL = "gpt-5-mini";
+
 async function collectionsWithCounts(userId: number) {
   const [rows, counts] = await Promise.all([db.listCollectionsForUser(userId), db.listCollectionClipCountsForUser(userId)]);
   const countByCollection = new Map(counts.map(row => [row.collectionId, row.clipCount]));
@@ -39,6 +41,18 @@ async function modelId(preferred: string, fallback: string) {
   return data.find(model => model.id === preferred)?.id ?? data.find(model => model.id === fallback)?.id;
 }
 
+async function requireAvailableModel(modelId: string, useCase: string) {
+  const { data } = await listLLMModels();
+  const selectedModel = data.find(model => model.id === modelId)?.id;
+  if (!selectedModel) {
+    throw new TRPCError({
+      code: "BAD_GATEWAY",
+      message: `OpenAI model ${modelId} is not available for ${useCase}.`,
+    });
+  }
+  return selectedModel;
+}
+
 async function clipsFor(userId?: number | null): Promise<FootageClip[]> {
   if (!userId) return DEMO_CLIPS;
   const saved = await db.listClipsForUser(userId);
@@ -46,7 +60,7 @@ async function clipsFor(userId?: number | null): Promise<FootageClip[]> {
 }
 
 async function analyzeRepresentativeFrame(input: { fileName: string; previewDataUrls: string[] }) {
-  const selectedModel = await modelId("gemini-3-flash-preview", "gpt-5-mini");
+  const selectedModel = await requireAvailableModel(OPENAI_FRAME_ANALYSIS_MODEL, "footage frame analysis");
   const result = await invokeLLM({
     model: selectedModel,
     messages: [
