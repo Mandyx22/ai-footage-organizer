@@ -46,6 +46,9 @@ export async function getUserByOpenId(openId: string) {
 }
 
 export async function getOrCreatePrototypeUser() {
+  const existing = await getUserByOpenId(PROTOTYPE_USER_OPEN_ID);
+  if (existing) return existing;
+
   await upsertUser({
     openId: PROTOTYPE_USER_OPEN_ID,
     name: "Prototype Workspace",
