@@ -3,6 +3,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { buildCollectionSuggestions, DEMO_CLIPS, rankFootage, rankSimilar, toFootageClip, type ClipMetadata, type FootageClip } from "./footage";
 import { invokeLLM, listLLMModels } from "./_core/llm";
+import { getFrameAnalysisProvider } from "./_core/frameAnalysisProvider";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { storagePut } from "./storage";
 import { COOKIE_NAME } from "@shared/const";
@@ -28,7 +29,29 @@ const demoCollections = [
   { id: -3, name: "Warm daylight", description: "Morning movement and golden details.", accent: "lime", isAiSuggested: false, clipCount: 2 },
 ];
 
-const OPENAI_FRAME_ANALYSIS_MODEL = "gpt-5-mini";
+const FRAME_ANALYSIS_SYSTEM_PROMPT = "You analyze several sampled frames from one video for a personal footage library. Treat frames as chronological evidence from the same clip. Infer only what is visually supported across the frames. Write description as one natural, searchable sentence of 12-24 words: visible content first, visual mood second only when supported. Use lower-case concise English tags for arrays. Use \"unknown\" for cameraMotion or other fields when the frames do not provide enough evidence. Do not overclaim identity, relationships, exact location, emotion, brand names, or events. Return only the exact JSON schema.";
+
+const FRAME_ANALYSIS_RESPONSE_SCHEMA = {
+  name: "footage_metadata",
+  strict: true,
+  schema: {
+    type: "object",
+    properties: {
+      description: { type: "string" },
+      subjects: { type: "array", items: { type: "string" } },
+      setting: { type: "string" },
+      time: { type: "string" },
+      lighting: { type: "array", items: { type: "string" } },
+      colors: { type: "array", items: { type: "string" } },
+      mood: { type: "array", items: { type: "string" } },
+      shotType: { type: "string" },
+      cameraMotion: { type: "string" },
+      possibleUses: { type: "array", items: { type: "string" } },
+    },
+    required: ["description", "subjects", "setting", "time", "lighting", "colors", "mood", "shotType", "cameraMotion", "possibleUses"],
+    additionalProperties: false,
+  },
+} as const;
 
 async function collectionsWithCounts(userId: number) {
   const [rows, counts] = await Promise.all([db.listCollectionsForUser(userId), db.listCollectionClipCountsForUser(userId)]);
@@ -41,18 +64,6 @@ async function modelId(preferred: string, fallback: string) {
   return data.find(model => model.id === preferred)?.id ?? data.find(model => model.id === fallback)?.id;
 }
 
-async function requireAvailableModel(modelId: string, useCase: string) {
-  const { data } = await listLLMModels();
-  const selectedModel = data.find(model => model.id === modelId)?.id;
-  if (!selectedModel) {
-    throw new TRPCError({
-      code: "BAD_GATEWAY",
-      message: `OpenAI model ${modelId} is not available for ${useCase}.`,
-    });
-  }
-  return selectedModel;
-}
-
 async function clipsFor(userId?: number | null): Promise<FootageClip[]> {
   if (!userId) return DEMO_CLIPS;
   const saved = await db.listClipsForUser(userId);
@@ -60,48 +71,12 @@ async function clipsFor(userId?: number | null): Promise<FootageClip[]> {
 }
 
 async function analyzeRepresentativeFrame(input: { fileName: string; previewDataUrls: string[] }) {
-  const selectedModel = await requireAvailableModel(OPENAI_FRAME_ANALYSIS_MODEL, "footage frame analysis");
-  const result = await invokeLLM({
-    model: selectedModel,
-    messages: [
-      { role: "system", content: "You analyze several sampled frames from one video for a personal footage library. Treat frames as chronological evidence from the same clip. Infer only what is visually supported across the frames. Write description as one natural, searchable sentence of 12-24 words: visible content first, visual mood second only when supported. Use lower-case concise English tags for arrays. Use \"unknown\" for cameraMotion or other fields when the frames do not provide enough evidence. Do not overclaim identity, relationships, exact location, emotion, brand names, or events. Return only the exact JSON schema." },
-      {
-        role: "user",
-        content: [
-          { type: "text", text: `Analyze these ${input.previewDataUrls.length} sampled frames from ${input.fileName}. They are ordered from earlier to later in the clip.` },
-          ...input.previewDataUrls.flatMap((url, index) => [
-            { type: "text" as const, text: `Frame ${index + 1} of ${input.previewDataUrls.length}` },
-            { type: "image_url" as const, image_url: { url, detail: "low" as const } },
-          ]),
-        ] as any,
-      },
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "footage_metadata",
-        strict: true,
-        schema: {
-          type: "object",
-          properties: {
-            description: { type: "string" },
-            subjects: { type: "array", items: { type: "string" } },
-            setting: { type: "string" },
-            time: { type: "string" },
-            lighting: { type: "array", items: { type: "string" } },
-            colors: { type: "array", items: { type: "string" } },
-            mood: { type: "array", items: { type: "string" } },
-            shotType: { type: "string" },
-            cameraMotion: { type: "string" },
-            possibleUses: { type: "array", items: { type: "string" } },
-          },
-          required: ["description", "subjects", "setting", "time", "lighting", "colors", "mood", "shotType", "cameraMotion", "possibleUses"],
-          additionalProperties: false,
-        },
-      },
-    },
+  const raw = await getFrameAnalysisProvider().analyzeFrames({
+    fileName: input.fileName,
+    previewDataUrls: input.previewDataUrls,
+    systemPrompt: FRAME_ANALYSIS_SYSTEM_PROMPT,
+    responseSchema: FRAME_ANALYSIS_RESPONSE_SCHEMA,
   });
-  const raw = result.choices[0]?.message.content;
   if (typeof raw !== "string" || !raw) throw new TRPCError({ code: "BAD_GATEWAY", message: "AI analysis returned no metadata." });
   return metadataSchema.parse(JSON.parse(raw)) as ClipMetadata;
 }

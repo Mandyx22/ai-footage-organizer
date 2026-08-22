@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   listClipsForUser: vi.fn(),
   listEditingProjectsForUser: vi.fn(),
   listCollectionsForUser: vi.fn(),
+  analyzeFrames: vi.fn(),
   listLLMModels: vi.fn(),
   moveClipToEditingProject: vi.fn(),
   invokeLLM: vi.fn(),
@@ -35,6 +36,12 @@ vi.mock("./db", () => ({
 vi.mock("./_core/llm", () => ({
   listLLMModels: mocks.listLLMModels,
   invokeLLM: mocks.invokeLLM,
+}));
+
+vi.mock("./_core/frameAnalysisProvider", () => ({
+  getFrameAnalysisProvider: () => ({
+    analyzeFrames: mocks.analyzeFrames,
+  }),
 }));
 
 vi.mock("./storage", () => ({
@@ -227,8 +234,7 @@ describe("protected footage procedures", () => {
       cameraMotion: "unknown",
       possibleUses: ["night montage"],
     };
-    mocks.listLLMModels.mockResolvedValue({ data: [{ id: "gpt-5-mini" }] });
-    mocks.invokeLLM.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(metadata) } }] });
+    mocks.analyzeFrames.mockResolvedValue(JSON.stringify(metadata));
     mocks.storagePut.mockResolvedValue({ key: "thumbs/sample.jpg", url: "/manus-storage/thumbs/sample.jpg" });
     mocks.createAnalyzedClip.mockResolvedValue({
       id: 444,
@@ -270,13 +276,13 @@ describe("protected footage procedures", () => {
     expect(result.clip).toMatchObject({ id: 444, description: metadata.description, cameraMotion: "unknown" });
     expect(mocks.storagePut).toHaveBeenCalledWith(expect.stringContaining("night.mov.jpg"), expect.any(Buffer), "image/jpeg");
     expect(mocks.createAnalyzedClip).toHaveBeenCalledWith(expect.objectContaining({ metadata, thumbnailUrl: "/manus-storage/thumbs/sample.jpg" }));
-    expect(mocks.invokeLLM).toHaveBeenCalledWith(expect.objectContaining({ model: "gpt-5-mini" }));
-    const messages = mocks.invokeLLM.mock.calls[0]?.[0]?.messages;
-    const serialized = JSON.stringify(messages);
-    expect(serialized).toContain("Frame 1 of 3");
-    expect(serialized).toContain("Frame 3 of 3");
-    expect(serialized).toContain("unknown");
-    expect(serialized).toContain("data:image/jpeg;base64,second");
+    expect(mocks.analyzeFrames).toHaveBeenCalledWith(expect.objectContaining({
+      fileName: "night.mov",
+      previewDataUrls: ["data:image/jpeg;base64,first", "data:image/jpeg;base64,second", "data:image/jpeg;base64,third"],
+      responseSchema: expect.objectContaining({ name: "footage_metadata", strict: true }),
+    }));
+    expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain("unknown");
+    expect(mocks.invokeLLM).not.toHaveBeenCalled();
   });
 
   it("analyzes and creates clips in the prototype workspace without Manus authentication", async () => {
@@ -292,8 +298,7 @@ describe("protected footage procedures", () => {
       cameraMotion: "static",
       possibleUses: ["closing moment"],
     };
-    mocks.listLLMModels.mockResolvedValue({ data: [{ id: "gpt-5-mini" }] });
-    mocks.invokeLLM.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(metadata) } }] });
+    mocks.analyzeFrames.mockResolvedValue(JSON.stringify(metadata));
     mocks.storagePut.mockResolvedValue({ key: "thumbs/prototype.jpg", url: "/manus-storage/thumbs/prototype.jpg" });
     mocks.createAnalyzedClip.mockResolvedValue({
       id: 555,
@@ -334,11 +339,11 @@ describe("protected footage procedures", () => {
     expect(result.clip).toMatchObject({ id: 555, fileName: "lake.mov" });
     expect(mocks.storagePut).toHaveBeenCalledWith(expect.stringContaining("framefind/42/thumbnails"), expect.any(Buffer), "image/jpeg");
     expect(mocks.createAnalyzedClip).toHaveBeenCalledWith(expect.objectContaining({ userId: 42, metadata }));
-    expect(mocks.invokeLLM).toHaveBeenCalledWith(expect.objectContaining({ model: "gpt-5-mini" }));
+    expect(mocks.analyzeFrames).toHaveBeenCalledWith(expect.objectContaining({ fileName: "lake.mov", previewDataUrls: ["data:image/jpeg;base64,first"] }));
   });
 
-  it("fails clearly before frame analysis when the OpenAI model is unavailable", async () => {
-    mocks.listLLMModels.mockResolvedValue({ data: [{ id: "gpt-4.1-mini" }] });
+  it("stops before storage and clip creation when frame analysis fails", async () => {
+    mocks.analyzeFrames.mockRejectedValue(new Error("Qwen frame analysis failed: 401 Unauthorized - invalid API key"));
     const caller = appRouter.createCaller(createAuthenticatedContext());
 
     await expect(caller.footage.analyzeFrame({
@@ -347,9 +352,8 @@ describe("protected footage procedures", () => {
       sizeBytes: 128,
       durationMs: 4_000,
       previewDataUrl: "data:image/jpeg;base64,first",
-    })).rejects.toThrow("OpenAI model gpt-5-mini is not available for footage frame analysis.");
+    })).rejects.toThrow("Qwen frame analysis failed: 401 Unauthorized - invalid API key");
 
-    expect(mocks.invokeLLM).not.toHaveBeenCalled();
     expect(mocks.storagePut).not.toHaveBeenCalled();
     expect(mocks.createAnalyzedClip).not.toHaveBeenCalled();
   });
