@@ -41,11 +41,14 @@ function metadataV2(
     description: string;
     visibleFacts: string[];
     subjects: string[];
+    actions: string[];
     setting: string;
+    spatialRelationships: string[];
     time: string;
     lighting: string[];
     colors: string[];
     mood: string[];
+    atmosphere: string[];
     shotType: string;
     cameraMotion: string;
     editingUses: string[];
@@ -57,7 +60,11 @@ function metadataV2(
     observed: {
       visibleFacts: overrides.visibleFacts ?? ["person beside lake"],
       subjects: overrides.subjects ?? ["person", "lake"],
+      actions: overrides.actions ?? ["sitting still"],
       setting: overrides.setting ?? "lakeside",
+      spatialRelationships: overrides.spatialRelationships ?? [
+        "one person isolated in a wide frame",
+      ],
       time: overrides.time ?? "sunset",
       lighting: overrides.lighting ?? ["warm sunset light"],
       colors: overrides.colors ?? ["gold", "blue"],
@@ -66,6 +73,7 @@ function metadataV2(
     },
     interpretation: {
       mood: overrides.mood ?? ["quiet", "reflective"],
+      atmosphere: overrides.atmosphere ?? ["warm", "still"],
       sceneInterpretation:
         overrides.sceneInterpretation ?? "a solitary lakeside pause",
       uncertainty: [],
@@ -129,6 +137,11 @@ describe("footage retrieval", () => {
       "train window",
       "sunset outside",
     ]);
+    expect(document.observed.actions).toEqual(["sitting still"]);
+    expect(document.observed.spatialRelationships).toEqual([
+      "one person isolated in a wide frame",
+    ]);
+    expect(document.interpretation.atmosphere).toEqual(["warm", "still"]);
     expect(document.interpretation.sceneInterpretation).toBe(
       "a quiet travel memory"
     );
@@ -157,10 +170,13 @@ describe("footage retrieval", () => {
       observed: {
         visibleFacts: [],
         subjects: ["train"],
+        actions: [],
         setting: "station",
+        spatialRelationships: [],
       },
       interpretation: {
         mood: ["quiet"],
+        atmosphere: [],
       },
       creative: {
         editingUses: ["transition"],
@@ -330,6 +346,67 @@ describe("footage retrieval", () => {
       subjects: ["person"],
       mood: ["calm"],
       possibleUses: ["opening"],
+      metadataJson: null,
     });
+  });
+
+  it("normalizes old Metadata V2 objects that lack semantic enrichment fields", () => {
+    const oldMetadata = {
+      description: "a person sits beside a lake at sunset",
+      observed: {
+        visibleFacts: ["person seated", "lake", "sunset"],
+        subjects: ["person", "lake"],
+        setting: "lakeside",
+        time: "sunset",
+        lighting: ["warm sunset light"],
+        colors: ["gold", "blue"],
+        shotType: "medium-wide",
+        cameraMotion: "static",
+      },
+      interpretation: {
+        mood: ["quiet", "reflective"],
+        sceneInterpretation: "a solitary lakeside pause",
+        uncertainty: [],
+      },
+      creative: {
+        editingUses: ["memory montage"],
+      },
+    };
+    const clip = toFootageClip({
+      id: 778,
+      userId: 9,
+      projectId: null,
+      clipKey: "clip_old_v2",
+      fileName: "old-v2.mov",
+      mimeType: "video/quicktime",
+      sizeBytes: 128,
+      durationMs: 1_200,
+      status: "ready",
+      storageKey: "clips/old-v2.mov",
+      mediaUrl: "/manus-storage/clips/old-v2.mov",
+      thumbnailKey: null,
+      thumbnailUrl: null,
+      description: oldMetadata.description,
+      subjects: JSON.stringify(oldMetadata.observed.subjects),
+      setting: oldMetadata.observed.setting,
+      timeOfDay: oldMetadata.observed.time,
+      lighting: JSON.stringify(oldMetadata.observed.lighting),
+      colors: JSON.stringify(oldMetadata.observed.colors),
+      moods: JSON.stringify(oldMetadata.interpretation.mood),
+      shotType: oldMetadata.observed.shotType,
+      cameraMotion: oldMetadata.observed.cameraMotion,
+      possibleUses: JSON.stringify(oldMetadata.creative.editingUses),
+      metadataJson: oldMetadata,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    expect(clip.metadataJson?.observed.actions).toEqual([]);
+    expect(clip.metadataJson?.observed.spatialRelationships).toEqual([]);
+    expect(clip.metadataJson?.interpretation.atmosphere).toEqual([]);
+    expect(buildSearchDocument(clip).observed.subjects).toEqual([
+      "person",
+      "lake",
+    ]);
   });
 });

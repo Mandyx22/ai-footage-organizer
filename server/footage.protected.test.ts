@@ -54,11 +54,14 @@ function metadataV2(
   overrides: Partial<{
     description: string;
     subjects: string[];
+    actions: string[];
     setting: string;
+    spatialRelationships: string[];
     time: string;
     lighting: string[];
     colors: string[];
     mood: string[];
+    atmosphere: string[];
     shotType: string;
     cameraMotion: string;
     editingUses: string[];
@@ -77,7 +80,11 @@ function metadataV2(
         "night",
       ],
       subjects: overrides.subjects ?? ["person", "street"],
+      actions: overrides.actions ?? ["walking through street"],
       setting: overrides.setting ?? "city street",
+      spatialRelationships: overrides.spatialRelationships ?? [
+        "person in foreground with street behind",
+      ],
       time: overrides.time ?? "night",
       lighting: overrides.lighting ?? ["neon"],
       colors: overrides.colors ?? ["blue", "magenta"],
@@ -86,6 +93,7 @@ function metadataV2(
     },
     interpretation: {
       mood: overrides.mood ?? ["lively"],
+      atmosphere: overrides.atmosphere ?? ["neon", "urban"],
       sceneInterpretation:
         overrides.sceneInterpretation ?? "urban night movement",
       uncertainty: overrides.uncertainty ?? [],
@@ -598,6 +606,18 @@ describe("protected footage procedures", () => {
     );
     expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
       "visibleFacts"
+    );
+    expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
+      "actions"
+    );
+    expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
+      "spatialRelationships"
+    );
+    expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
+      "atmosphere"
+    );
+    expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
+      "Do not infer or describe race"
     );
     expect(mocks.invokeLLM).not.toHaveBeenCalled();
   });

@@ -18,7 +18,9 @@ export type ClipMetadataV2 = {
   observed: {
     visibleFacts: string[];
     subjects: string[];
+    actions: string[];
     setting: string;
+    spatialRelationships: string[];
     time: string;
     lighting: string[];
     colors: string[];
@@ -27,6 +29,7 @@ export type ClipMetadataV2 = {
   };
   interpretation: {
     mood: string[];
+    atmosphere: string[];
     sceneInterpretation: string;
     uncertainty: string[];
   };
@@ -227,7 +230,9 @@ export type SearchDocument = {
   observed: {
     visibleFacts: string[];
     subjects: string[];
+    actions: string[];
     setting: string;
+    spatialRelationships: string[];
     time: string;
     lighting: string[];
     colors: string[];
@@ -236,6 +241,7 @@ export type SearchDocument = {
   };
   interpretation: {
     mood: string[];
+    atmosphere: string[];
     sceneInterpretation: string;
   };
   creative: {
@@ -271,7 +277,8 @@ function metadataJsonAsV2(value: unknown): ClipMetadataV2 | null {
     Array.isArray(metadata.creative)
   )
     return null;
-  return isStringArray(metadata.observed.visibleFacts) &&
+  const hasCoreShape =
+    isStringArray(metadata.observed.visibleFacts) &&
     isStringArray(metadata.observed.subjects) &&
     typeof metadata.observed.setting === "string" &&
     typeof metadata.observed.time === "string" &&
@@ -282,9 +289,30 @@ function metadataJsonAsV2(value: unknown): ClipMetadataV2 | null {
     isStringArray(metadata.interpretation.mood) &&
     typeof metadata.interpretation.sceneInterpretation === "string" &&
     isStringArray(metadata.interpretation.uncertainty) &&
-    isStringArray(metadata.creative.editingUses)
-    ? metadata
-    : null;
+    isStringArray(metadata.creative.editingUses);
+
+  if (!hasCoreShape) return null;
+
+  return {
+    ...metadata,
+    observed: {
+      ...metadata.observed,
+      actions: isStringArray(metadata.observed.actions)
+        ? metadata.observed.actions
+        : [],
+      spatialRelationships: isStringArray(
+        metadata.observed.spatialRelationships
+      )
+        ? metadata.observed.spatialRelationships
+        : [],
+    },
+    interpretation: {
+      ...metadata.interpretation,
+      atmosphere: isStringArray(metadata.interpretation.atmosphere)
+        ? metadata.interpretation.atmosphere
+        : [],
+    },
+  };
 }
 
 export function buildSearchDocument(clip: FootageClip): SearchDocument {
@@ -295,7 +323,9 @@ export function buildSearchDocument(clip: FootageClip): SearchDocument {
       observed: {
         visibleFacts: metadata.observed.visibleFacts,
         subjects: metadata.observed.subjects,
+        actions: metadata.observed.actions,
         setting: metadata.observed.setting,
+        spatialRelationships: metadata.observed.spatialRelationships,
         time: metadata.observed.time,
         lighting: metadata.observed.lighting,
         colors: metadata.observed.colors,
@@ -304,6 +334,7 @@ export function buildSearchDocument(clip: FootageClip): SearchDocument {
       },
       interpretation: {
         mood: metadata.interpretation.mood,
+        atmosphere: metadata.interpretation.atmosphere,
         sceneInterpretation: metadata.interpretation.sceneInterpretation,
       },
       creative: {
@@ -317,7 +348,9 @@ export function buildSearchDocument(clip: FootageClip): SearchDocument {
     observed: {
       visibleFacts: [],
       subjects: clip.subjects,
+      actions: [],
       setting: clip.setting,
+      spatialRelationships: [],
       time: clip.time,
       lighting: clip.lighting,
       colors: clip.colors,
@@ -326,6 +359,7 @@ export function buildSearchDocument(clip: FootageClip): SearchDocument {
     },
     interpretation: {
       mood: clip.mood,
+      atmosphere: [],
       sceneInterpretation: "",
     },
     creative: {

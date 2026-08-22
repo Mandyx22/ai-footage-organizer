@@ -48,7 +48,12 @@ describe("clip metadata persistence", () => {
       observed: {
         visibleFacts: ["person seated", "lake", "sunset"],
         subjects: ["person", "lake"],
+        actions: ["sitting still", "looking toward water"],
         setting: "lakeside",
+        spatialRelationships: [
+          "one person isolated in a wide frame",
+          "large empty space around subject",
+        ],
         time: "sunset",
         lighting: ["warm sunset light"],
         colors: ["gold", "blue"],
@@ -57,6 +62,7 @@ describe("clip metadata persistence", () => {
       },
       interpretation: {
         mood: ["quiet", "reflective"],
+        atmosphere: ["warm", "spacious", "still"],
         sceneInterpretation: "a solitary lakeside pause",
         uncertainty: ["camera motion inferred from sampled frames only"],
       },

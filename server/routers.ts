@@ -25,7 +25,9 @@ const metadataV2Schema = z
       .object({
         visibleFacts: z.array(z.string()),
         subjects: z.array(z.string()),
+        actions: z.array(z.string()),
         setting: z.string(),
+        spatialRelationships: z.array(z.string()),
         time: z.string(),
         lighting: z.array(z.string()),
         colors: z.array(z.string()),
@@ -36,6 +38,7 @@ const metadataV2Schema = z
     interpretation: z
       .object({
         mood: z.array(z.string()),
+        atmosphere: z.array(z.string()),
         sceneInterpretation: z.string(),
         uncertainty: z.array(z.string()),
       })
@@ -76,7 +79,7 @@ const demoCollections = [
 ];
 
 const FRAME_ANALYSIS_SYSTEM_PROMPT =
-  'You analyze several sampled frames from one video for a personal footage library. The sampled frames are multiple views of one video clip, not separate clips. Return one combined clip-level Metadata V2 analysis. Keep observed visual facts, subjective interpretation, and creative editing suggestions separated. Description must be one concise grounded clip-level sentence, primarily describing visually supported content and not giving editing advice. Observed fields must contain only visual facts or visually supported attributes. Interpretation fields may include subjective mood and a short scene interpretation, but do not present them as direct facts. Uncertainty should contain short natural-language caveats only where useful; use an empty array if none are useful. Creative editingUses should contain editorial suggestions only. Use lower-case concise English tags for arrays. Use "unknown" for cameraMotion or other fields when the frames do not provide enough evidence. Do not overclaim identity, relationships, exact location, emotion, brand names, or events. Return exactly one JSON object that matches the schema. Never return a top-level array.';
+  'You analyze several sampled frames from one video for a personal footage library. The sampled frames are multiple views of one video clip, not separate clips. Return one combined clip-level Metadata V2 analysis. Keep observed visual facts, subjective interpretation, and creative editing suggestions separated. Description must be one concise but specific grounded clip-level sentence that includes relevant visual action or context when supported and never gives editing advice. Observed fields must contain only visual facts or visually supported attributes. visibleFacts should be factual visual observations only. actions should be concise visually supported activity or behavior phrases such as "walking with luggage", "standing still", or "eating at a table"; avoid unsupported temporal or narrative assumptions. spatialRelationships should describe visible subject/object arrangement and composition such as "one person isolated in a wide frame", "crowd behind foreground subject", or "large empty space around subject"; keep it spatial, not psychological or narrative. mood is subjective emotional or semantic tone, not objective fact. atmosphere is concise sensory or visual ambience such as "warm", "soft", "hazy", "spacious", "dim", "rainy", "chaotic", "intimate", "airy", or "still"; keep it separate from mood. sceneInterpretation should be a concise semantic reading of the scene without inventing backstory. Uncertainty should contain short natural-language caveats only where useful; use an empty array if none are useful. Creative editingUses should contain editorial suggestions only. Use lower-case concise English tags for arrays. Use "unknown" for cameraMotion or other fields when the frames do not provide enough evidence. Do not infer or describe race, ethnicity, gender identity, exact age, private identity, unsupported relationships, unsupported exact locations, emotional state as objective fact, or fictional backstory. Prefer person / people, visually supported action, spatial facts, and cautious interpretation. Return exactly one JSON object that matches the schema. Never return a top-level array.';
 
 const FRAME_ANALYSIS_RESPONSE_SCHEMA = {
   name: "footage_metadata",
@@ -90,7 +93,9 @@ const FRAME_ANALYSIS_RESPONSE_SCHEMA = {
         properties: {
           visibleFacts: { type: "array", items: { type: "string" } },
           subjects: { type: "array", items: { type: "string" } },
+          actions: { type: "array", items: { type: "string" } },
           setting: { type: "string" },
+          spatialRelationships: { type: "array", items: { type: "string" } },
           time: { type: "string" },
           lighting: { type: "array", items: { type: "string" } },
           colors: { type: "array", items: { type: "string" } },
@@ -100,7 +105,9 @@ const FRAME_ANALYSIS_RESPONSE_SCHEMA = {
         required: [
           "visibleFacts",
           "subjects",
+          "actions",
           "setting",
+          "spatialRelationships",
           "time",
           "lighting",
           "colors",
@@ -113,10 +120,11 @@ const FRAME_ANALYSIS_RESPONSE_SCHEMA = {
         type: "object",
         properties: {
           mood: { type: "array", items: { type: "string" } },
+          atmosphere: { type: "array", items: { type: "string" } },
           sceneInterpretation: { type: "string" },
           uncertainty: { type: "array", items: { type: "string" } },
         },
-        required: ["mood", "sceneInterpretation", "uncertainty"],
+        required: ["mood", "atmosphere", "sceneInterpretation", "uncertainty"],
         additionalProperties: false,
       },
       creative: {
