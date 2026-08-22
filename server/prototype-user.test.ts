@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   drizzle: vi.fn(),
   insert: vi.fn(),
   onDuplicateKeyUpdate: vi.fn(),
+  select: vi.fn(),
   selectRows: [] as unknown[][],
 }));
 
@@ -47,7 +48,7 @@ async function loadDbModule() {
   vi.resetModules();
   process.env.DATABASE_URL = "mysql://user:password@example.invalid:3306/db";
   mocks.drizzle.mockReturnValue({
-    select: vi.fn(queryChain),
+    select: mocks.select.mockImplementation(queryChain),
     insert: vi.fn(insertChain),
   });
   return import("./db");
@@ -71,6 +72,20 @@ describe("prototype workspace user", () => {
     expect(mocks.onDuplicateKeyUpdate).not.toHaveBeenCalled();
   });
 
+  it("caches the first prototype lookup and avoids later DB reads", async () => {
+    const existing = prototypeUser();
+    mocks.selectRows = [[existing]];
+    const { getOrCreatePrototypeUser } = await loadDbModule();
+
+    const first = await getOrCreatePrototypeUser();
+    const second = await getOrCreatePrototypeUser();
+
+    expect(first).toBe(existing);
+    expect(second).toBe(existing);
+    expect(mocks.select).toHaveBeenCalledOnce();
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
   it("creates and returns the prototype user when it is missing", async () => {
     const created = prototypeUser();
     mocks.selectRows = [[], [created]];
@@ -79,6 +94,21 @@ describe("prototype workspace user", () => {
     const result = await getOrCreatePrototypeUser();
 
     expect(result).toBe(created);
+    expect(mocks.insert).toHaveBeenCalledOnce();
+    expect(mocks.onDuplicateKeyUpdate).toHaveBeenCalledOnce();
+  });
+
+  it("caches the created prototype user after a miss", async () => {
+    const created = prototypeUser();
+    mocks.selectRows = [[], [created]];
+    const { getOrCreatePrototypeUser } = await loadDbModule();
+
+    const first = await getOrCreatePrototypeUser();
+    const second = await getOrCreatePrototypeUser();
+
+    expect(first).toBe(created);
+    expect(second).toBe(created);
+    expect(mocks.select).toHaveBeenCalledTimes(2);
     expect(mocks.insert).toHaveBeenCalledOnce();
     expect(mocks.onDuplicateKeyUpdate).toHaveBeenCalledOnce();
   });
