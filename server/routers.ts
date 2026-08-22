@@ -240,6 +240,9 @@ export const appRouter = router({
           scores: Object.fromEntries(
             ranked.map(item => [item.clip.id, item.score])
           ),
+          reasons: Object.fromEntries(
+            ranked.map(item => [item.clip.id, item.reasons])
+          ),
           query: input.query,
           mode: "sample" as const,
         };
@@ -299,6 +302,9 @@ export const appRouter = router({
           scores: Object.fromEntries(
             ranked.map(item => [item.clip.id, item.score])
           ),
+          reasons: Object.fromEntries(
+            ranked.map(item => [item.clip.id, item.reasons])
+          ),
           query: input.query,
           mode: "personal" as const,
         };
@@ -350,6 +356,9 @@ export const appRouter = router({
           clips: ranked.map(item => item.clip),
           scores: Object.fromEntries(
             ranked.map(item => [item.clip.id, item.score])
+          ),
+          reasons: Object.fromEntries(
+            ranked.map(item => [item.clip.id, item.reasons])
           ),
           query: input.query,
         };

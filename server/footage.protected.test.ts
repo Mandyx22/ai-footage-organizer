@@ -221,6 +221,60 @@ describe("protected footage procedures", () => {
     );
   });
 
+  it("searches only the authenticated user's requested project", async () => {
+    const metadata = metadataV2({
+      description: "a quiet train window at sunset",
+      subjects: ["train", "window"],
+      setting: "train interior",
+      lighting: ["golden hour"],
+      colors: ["amber"],
+      mood: ["quiet"],
+    });
+    const legacy = legacyFromMetadataV2(metadata);
+    mocks.listClipsForUser.mockResolvedValue([
+      {
+        id: 333,
+        userId: 9,
+        projectId: 12,
+        clipKey: "clip_scoped",
+        fileName: "scoped.mov",
+        mimeType: "video/quicktime",
+        sizeBytes: 128,
+        durationMs: 1_200,
+        status: "ready",
+        storageKey: "clips/scoped.mov",
+        mediaUrl: "/manus-storage/clips/scoped.mov",
+        thumbnailKey: null,
+        thumbnailUrl: null,
+        description: legacy.description,
+        subjects: JSON.stringify(legacy.subjects),
+        setting: legacy.setting,
+        timeOfDay: legacy.time,
+        lighting: JSON.stringify(legacy.lighting),
+        colors: JSON.stringify(legacy.colors),
+        moods: JSON.stringify(legacy.mood),
+        shotType: legacy.shotType,
+        cameraMotion: legacy.cameraMotion,
+        possibleUses: JSON.stringify(legacy.possibleUses),
+        metadataJson: metadata,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+    const caller = appRouter.createCaller(createAuthenticatedContext());
+
+    const result = await caller.footage.personalSearch({
+      query: "quiet train",
+      projectId: 12,
+    });
+
+    expect(mocks.listClipsForUser).toHaveBeenCalledWith(9, 12);
+    expect(result.clips.map(clip => clip.id)).toEqual([333]);
+    expect(result.reasons[333]).toEqual(
+      expect.arrayContaining(["subject: train", "mood: quiet"])
+    );
+  });
+
   it("returns prototype workspace clips through My Library without Manus authentication", async () => {
     mocks.listClipsForUser.mockResolvedValue([
       {

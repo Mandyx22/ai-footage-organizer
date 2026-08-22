@@ -77,12 +77,6 @@ export function formatDuration(durationMs: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-export function matchReasons(clip: Clip, query: string) {
-  const terms = query.toLowerCase().match(/[a-z0-9]+/g) ?? [];
-  const metadata = [...clip.subjects, clip.setting, clip.time, ...clip.lighting, ...clip.colors, ...clip.mood, clip.shotType, clip.cameraMotion, ...clip.possibleUses];
-  return terms.filter(term => metadata.some(value => value.toLowerCase().includes(term))).slice(0, 3);
-}
-
 export const REPRESENTATIVE_FRAME_RATIOS = [0.1, 0.35, 0.6, 0.85] as const;
 
 export function representativeFrameTimes(durationSeconds: number) {

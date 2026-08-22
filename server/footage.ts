@@ -59,6 +59,7 @@ export type FootageClip = ClipMetadata & {
   mediaUrl: string | null;
   status: "uploading" | "analyzing" | "ready" | "failed";
   createdAt: Date | string;
+  metadataJson?: ClipMetadataV2 | null;
 };
 
 export type CollectionSuggestion = {
@@ -202,37 +203,282 @@ const synonyms: Record<string, string[]> = {
   dreamy: ["dreamy", "reflective", "nostalgic", "soft"],
 };
 
-function haystack(clip: FootageClip) {
+type SearchField = {
+  key: string;
+  label: string;
+  weight: number;
+  values: string[];
+  maxMatches: number;
+};
+
+export type SearchMatchReason = {
+  field: string;
+  value: string;
+};
+
+export type RankedFootage = {
+  clip: FootageClip;
+  score: number;
+  reasons: string[];
+};
+
+export type SearchDocument = {
+  description: string;
+  observed: {
+    visibleFacts: string[];
+    subjects: string[];
+    setting: string;
+    time: string;
+    lighting: string[];
+    colors: string[];
+    shotType: string;
+    cameraMotion: string;
+  };
+  interpretation: {
+    mood: string[];
+    sceneInterpretation: string;
+  };
+  creative: {
+    editingUses: string[];
+  };
+};
+
+function normalizeText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function unique(values: string[]) {
+  return Array.from(new Set(values.map(value => value.trim()).filter(Boolean)));
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(item => typeof item === "string");
+}
+
+function metadataJsonAsV2(value: unknown): ClipMetadataV2 | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const metadata = value as ClipMetadataV2;
+  if (
+    typeof metadata.description !== "string" ||
+    !metadata.observed ||
+    typeof metadata.observed !== "object" ||
+    Array.isArray(metadata.observed) ||
+    !metadata.interpretation ||
+    typeof metadata.interpretation !== "object" ||
+    Array.isArray(metadata.interpretation) ||
+    !metadata.creative ||
+    typeof metadata.creative !== "object" ||
+    Array.isArray(metadata.creative)
+  )
+    return null;
+  return isStringArray(metadata.observed.visibleFacts) &&
+    isStringArray(metadata.observed.subjects) &&
+    typeof metadata.observed.setting === "string" &&
+    typeof metadata.observed.time === "string" &&
+    isStringArray(metadata.observed.lighting) &&
+    isStringArray(metadata.observed.colors) &&
+    typeof metadata.observed.shotType === "string" &&
+    typeof metadata.observed.cameraMotion === "string" &&
+    isStringArray(metadata.interpretation.mood) &&
+    typeof metadata.interpretation.sceneInterpretation === "string" &&
+    isStringArray(metadata.interpretation.uncertainty) &&
+    isStringArray(metadata.creative.editingUses)
+    ? metadata
+    : null;
+}
+
+export function buildSearchDocument(clip: FootageClip): SearchDocument {
+  const metadata = metadataJsonAsV2(clip.metadataJson);
+  if (metadata) {
+    return {
+      description: metadata.description,
+      observed: {
+        visibleFacts: metadata.observed.visibleFacts,
+        subjects: metadata.observed.subjects,
+        setting: metadata.observed.setting,
+        time: metadata.observed.time,
+        lighting: metadata.observed.lighting,
+        colors: metadata.observed.colors,
+        shotType: metadata.observed.shotType,
+        cameraMotion: metadata.observed.cameraMotion,
+      },
+      interpretation: {
+        mood: metadata.interpretation.mood,
+        sceneInterpretation: metadata.interpretation.sceneInterpretation,
+      },
+      creative: {
+        editingUses: metadata.creative.editingUses,
+      },
+    };
+  }
+
+  return {
+    description: clip.description,
+    observed: {
+      visibleFacts: [],
+      subjects: clip.subjects,
+      setting: clip.setting,
+      time: clip.time,
+      lighting: clip.lighting,
+      colors: clip.colors,
+      shotType: clip.shotType,
+      cameraMotion: clip.cameraMotion,
+    },
+    interpretation: {
+      mood: clip.mood,
+      sceneInterpretation: "",
+    },
+    creative: {
+      editingUses: clip.possibleUses,
+    },
+  };
+}
+
+function searchFields(document: SearchDocument): SearchField[] {
   return [
-    clip.description,
-    ...clip.subjects,
-    clip.setting,
-    clip.time,
-    ...clip.lighting,
-    ...clip.colors,
-    ...clip.mood,
-    clip.shotType,
-    clip.cameraMotion,
-    ...clip.possibleUses,
-  ]
-    .join(" ")
-    .toLowerCase();
+    {
+      key: "observed.subjects",
+      label: "subject",
+      weight: 4,
+      values: document.observed.subjects,
+      maxMatches: 2,
+    },
+    {
+      key: "observed.visibleFacts",
+      label: "visible fact",
+      weight: 4,
+      values: document.observed.visibleFacts,
+      maxMatches: 2,
+    },
+    {
+      key: "observed.setting",
+      label: "setting",
+      weight: 4,
+      values: [document.observed.setting],
+      maxMatches: 1,
+    },
+    {
+      key: "interpretation.mood",
+      label: "mood",
+      weight: 4,
+      values: document.interpretation.mood,
+      maxMatches: 2,
+    },
+    {
+      key: "observed.time",
+      label: "time",
+      weight: 3,
+      values: [document.observed.time],
+      maxMatches: 1,
+    },
+    {
+      key: "observed.lighting",
+      label: "lighting",
+      weight: 3,
+      values: document.observed.lighting,
+      maxMatches: 2,
+    },
+    {
+      key: "observed.colors",
+      label: "color",
+      weight: 3,
+      values: document.observed.colors,
+      maxMatches: 2,
+    },
+    {
+      key: "observed.shotType",
+      label: "shot type",
+      weight: 3,
+      values: [document.observed.shotType],
+      maxMatches: 1,
+    },
+    {
+      key: "observed.cameraMotion",
+      label: "camera motion",
+      weight: 3,
+      values: [document.observed.cameraMotion],
+      maxMatches: 1,
+    },
+    {
+      key: "creative.editingUses",
+      label: "editing use",
+      weight: 2,
+      values: document.creative.editingUses,
+      maxMatches: 2,
+    },
+    {
+      key: "interpretation.sceneInterpretation",
+      label: "scene interpretation",
+      weight: 2,
+      values: [document.interpretation.sceneInterpretation],
+      maxMatches: 1,
+    },
+    {
+      key: "description",
+      label: "description",
+      weight: 1,
+      values: [document.description],
+      maxMatches: 1,
+    },
+  ];
+}
+
+function queryTokens(query: string) {
+  return unique(query.toLowerCase().match(/[a-z0-9]+/g) ?? []);
+}
+
+function expandedConcepts(token: string) {
+  return unique([token, ...(synonyms[token] ?? [])]).map(normalizeText);
+}
+
+function scoreField(field: SearchField, tokens: string[]) {
+  const normalizedValues = field.values
+    .map(value => ({ raw: value, normalized: normalizeText(value) }))
+    .filter(value => value.normalized);
+  const matched: SearchMatchReason[] = [];
+  const matchedTokens = new Set<string>();
+
+  for (const token of tokens) {
+    if (matchedTokens.has(token)) continue;
+    const concepts = expandedConcepts(token);
+    const match = normalizedValues.find(value =>
+      concepts.some(concept => value.normalized.includes(concept))
+    );
+    if (!match) continue;
+    matchedTokens.add(token);
+    if (!matched.some(reason => reason.field === field.label && reason.value === match.raw)) {
+      matched.push({ field: field.label, value: match.raw });
+    }
+  }
+
+  const cappedMatches = Math.min(matchedTokens.size, field.maxMatches);
+  return {
+    score: cappedMatches * field.weight,
+    reasons: matched.slice(0, field.maxMatches),
+  };
 }
 
 export function rankFootage(clips: FootageClip[], query: string) {
-  const tokens = query.toLowerCase().match(/[a-z0-9]+/g) ?? [];
-  if (!tokens.length) return clips.map(clip => ({ clip, score: 0 }));
+  const tokens = queryTokens(query);
+  if (!tokens.length)
+    return clips.map(clip => ({ clip, score: 0, reasons: [] }));
   return clips
     .map(clip => {
-      const text = haystack(clip);
-      const score = tokens.reduce((sum, token) => {
-        const concepts = [token, ...(synonyms[token] ?? [])];
-        return sum + (concepts.some(concept => text.includes(concept)) ? 1 : 0);
-      }, 0);
-      return { clip, score };
+      const fields = searchFields(buildSearchDocument(clip));
+      const fieldScores = fields.map(field => scoreField(field, tokens));
+      const score = fieldScores.reduce((sum, field) => sum + field.score, 0);
+      const reasons = unique(
+        fieldScores.flatMap(field =>
+          field.reasons.map(reason => `${reason.field}: ${reason.value}`)
+        )
+      ).slice(0, 4);
+      return { clip, score, reasons };
     })
     .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return Number(b.clip.id) - Number(a.clip.id);
+    });
 }
 
 export function rankSimilar(
@@ -350,5 +596,6 @@ export function toFootageClip(clip: Clip): FootageClip {
     cameraMotion: clip.cameraMotion,
     possibleUses: safeArray(clip.possibleUses),
     createdAt: clip.createdAt,
+    metadataJson: metadataJsonAsV2(clip.metadataJson),
   };
 }

@@ -7,7 +7,6 @@ import {
   formatDuration,
   gradients,
   hideBrokenImageElement,
-  matchReasons,
   type Clip,
 } from "@/lib/footage";
 import { getScopedLibrarySource } from "@/lib/librarySource";
@@ -222,7 +221,9 @@ export default function Library() {
                         selected={isSelected(clip.id)}
                         focused={focusedClip?.id === clip.id}
                         reasons={
-                          showSimilar ? [] : matchReasons(clip, searchQuery)
+                          !showSimilar && searchQuery.trim().length > 1
+                            ? (searched.data?.reasons[clip.id] ?? [])
+                            : []
                         }
                         onFocus={() => {
                           setFocusedClipId(clip.id);

@@ -36,13 +36,14 @@ describe("footage router", () => {
     expect(similar.clips.map(clip => clip.id)).not.toContain(101);
   });
 
-  it("returns explainable semantic-search results from the sample workspace", async () => {
+  it("returns explainable metadata-search results from the sample workspace", async () => {
     const caller = appRouter.createCaller(createPublicContext());
     const result = await caller.footage.search({ query: "quiet blue night shots" });
 
     expect(result.query).toBe("quiet blue night shots");
     expect(result.clips[0]?.id).toBe(104);
     expect(result.scores[104]).toBeGreaterThan(0);
+    expect(result.reasons[104]).toContain("mood: quiet");
   });
 
   it("returns dimensional similar-shot results without the reference clip", async () => {
