@@ -28,7 +28,9 @@ import {
   FolderHeart,
   FolderPlus,
   ImageUp,
+  Loader2,
   Play,
+  Plus,
   Search,
   Sparkles,
   Trash2,
@@ -71,9 +73,14 @@ export default function MyLibrary() {
     useState<ActiveProject>(undefined);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [createCollectionOpen, setCreateCollectionOpen] = useState(false);
+  const [addCollectionOpen, setAddCollectionOpen] = useState(false);
+  const [collectionName, setCollectionName] = useState("");
+  const [targetCollectionId, setTargetCollectionId] = useState("");
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projectName, setProjectName] = useState("");
-  const { selectedIds, toggleSelection, isSelected } = useFootageSelection();
+  const { selectedIds, toggleSelection, clearSelection, isSelected } =
+    useFootageSelection();
   const projectInput = useMemo(
     () =>
       activeProjectId === undefined
@@ -108,6 +115,9 @@ export default function MyLibrary() {
   const similar = trpc.footage.personalSimilar.useQuery(similarInput, {
     enabled: hasWorkspaceIdentity && Boolean(focusedClipId && showSimilar),
   });
+  const collectionData = trpc.collections.personalList.useQuery(undefined, {
+    enabled: hasWorkspaceIdentity,
+  });
   const createProject = trpc.projects.create.useMutation({
     onSuccess: async project => {
       await utils.projects.list.invalidate();
@@ -128,6 +138,8 @@ export default function MyLibrary() {
       toast.success("Clip moved to its editing project.");
     },
   });
+  const createCollection = trpc.collections.create.useMutation();
+  const addClipToCollection = trpc.collections.addClip.useMutation();
   const deleteClip = trpc.footage.delete.useMutation({
     onSuccess: async (_result, input) => {
       if (focusedClipId === input.clipId) {
@@ -175,9 +187,11 @@ export default function MyLibrary() {
   const activeProject = projects.data?.projects.find(
     project => project.id === activeProjectId
   );
-  const activeSelectionCount = selectedIds.filter(id =>
+  const selectedClipIds = selectedIds.filter(id =>
     baseClips.some(clip => clip.id === id)
-  ).length;
+  );
+  const activeSelectionCount = selectedClipIds.length;
+  const collections = collectionData.data?.collections ?? [];
   const selectedProjectForUpload =
     activeProjectId === undefined ? null : activeProjectId;
   const refreshProjectList = () =>
@@ -187,6 +201,63 @@ export default function MyLibrary() {
       utils.footage.personalSimilar.invalidate(),
       utils.projects.list.invalidate(),
     ]);
+  const persistSelectedClipsToCollection = async (collectionId: number) => {
+    if (!selectedClipIds.length) return;
+    await Promise.all(
+      selectedClipIds.map(clipId =>
+        addClipToCollection.mutateAsync({ collectionId, clipId })
+      )
+    );
+    await Promise.all([
+      utils.collections.personalList.invalidate(),
+      utils.collections.personalSuggestions.invalidate(),
+    ]);
+  };
+  const createCollectionFromSelection = async () => {
+    if (!collectionName.trim()) {
+      toast.error("Give this collection a name first.");
+      return;
+    }
+    try {
+      const collection = await createCollection.mutateAsync({
+        name: collectionName.trim(),
+        description: selectedClipIds.length
+          ? `${selectedClipIds.length} selected personal clips from Framefind.`
+          : undefined,
+        accent: "apricot",
+      });
+      await persistSelectedClipsToCollection(collection.id);
+      setCollectionName("");
+      setCreateCollectionOpen(false);
+      toast.success(
+        `${selectedClipIds.length} clips are now in ${collection.name}.`
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not make that collection."
+      );
+    }
+  };
+  const addSelectedToExistingCollection = async () => {
+    const collectionId = Number(targetCollectionId);
+    if (!Number.isInteger(collectionId)) {
+      toast.error("Choose a collection first.");
+      return;
+    }
+    try {
+      await persistSelectedClipsToCollection(collectionId);
+      setAddCollectionOpen(false);
+      toast.success(`${selectedClipIds.length} clips added to collection.`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not add those clips to the collection."
+      );
+    }
+  };
 
   return (
     <>
@@ -288,7 +359,7 @@ export default function MyLibrary() {
                     : "They organize clips for a specific edit without moving the original files."}
                 </div>
               </aside>
-              <div>
+              <div className={cn(activeSelectionCount > 0 && "pb-10")}>
                 <div className="mb-5 rounded-2xl border-[1.5px] border-[#2c2922]/55 bg-[#dcefdc] p-4 shadow-[2px_2px_0_rgba(44,41,34,.13)]">
                   <LibrarySourceStatus mode="personal" />
                   <h1 className="mt-1 font-hand text-4xl font-bold leading-none">
@@ -461,28 +532,22 @@ export default function MyLibrary() {
                       </p>
                     </div>
                   )}
+                <SelectionActionBar
+                  selectedCount={activeSelectionCount}
+                  hasCollections={collections.length > 0}
+                  creating={
+                    createCollection.isPending || addClipToCollection.isPending
+                  }
+                  adding={addClipToCollection.isPending}
+                  onCreateCollection={() => setCreateCollectionOpen(true)}
+                  onAddToCollection={() => {
+                    setTargetCollectionId(String(collections[0]?.id ?? ""));
+                    setAddCollectionOpen(true);
+                  }}
+                  onClear={clearSelection}
+                />
               </div>
               <aside className="space-y-5 xl:pt-2">
-                <div className="paper-panel rounded-2xl p-4">
-                  <p className="font-hand text-xl font-bold">
-                    Your working pile
-                  </p>
-                  <p className="mt-1 text-xs leading-5 ink-muted">
-                    Circle personal clips here. The selection can travel to
-                    Collections and Ask My Footage.
-                  </p>
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className="rounded-md bg-[#dcefdc] px-2 py-1 font-mono text-[10px]">
-                      {activeSelectionCount} circled
-                    </span>
-                    <Link
-                      href="/ask"
-                      className="inline-flex items-center gap-1 text-xs font-bold underline decoration-wavy decoration-[#e69275] underline-offset-4"
-                    >
-                      Ask about them <Sparkles className="size-3" />
-                    </Link>
-                  </div>
-                </div>
                 <Link
                   href="/collections"
                   className="note-pink block rotate-[.5deg] rounded-2xl border-[1.5px] border-[#2c2922]/48 p-4 shadow-[2px_2px_0_rgba(44,41,34,.12)]"
@@ -526,12 +591,159 @@ export default function MyLibrary() {
             deleteClip.mutate({ clipId: focusedClip.id });
         }}
       />
+      <Dialog
+        open={createCollectionOpen}
+        onOpenChange={setCreateCollectionOpen}
+      >
+        <DialogContent className="border-[1.5px] border-[#2c2922] bg-[#fffdf7] text-[#2c2922] shadow-[4px_4px_0_#2c2922] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-hand text-3xl font-bold">
+              Make a collection
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs leading-5 ink-muted">
+              Save {activeSelectionCount} selected clips as a persistent group.
+            </p>
+            <input
+              autoFocus
+              value={collectionName}
+              onChange={event => setCollectionName(event.target.value)}
+              onKeyDown={event =>
+                event.key === "Enter" && createCollectionFromSelection()
+              }
+              placeholder="e.g. Quiet summer memory"
+              className="h-10 w-full rounded-lg border-[1.5px] border-[#2c2922]/55 bg-[#fffdf7] px-3 text-sm outline-none focus:ring-2 focus:ring-[#e69275]"
+            />
+            <Button
+              onClick={createCollectionFromSelection}
+              disabled={
+                !activeSelectionCount ||
+                !collectionName.trim() ||
+                createCollection.isPending ||
+                addClipToCollection.isPending
+              }
+              className="w-full rounded-xl border-[1.5px] border-[#2c2922] bg-[#f4ad89] text-xs font-bold text-[#2c2922] shadow-[2px_2px_0_#2c2922] hover:bg-[#fac7ae]"
+            >
+              {(createCollection.isPending ||
+                addClipToCollection.isPending) && (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              )}
+              Create collection
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={addCollectionOpen} onOpenChange={setAddCollectionOpen}>
+        <DialogContent className="border-[1.5px] border-[#2c2922] bg-[#fffdf7] text-[#2c2922] shadow-[4px_4px_0_#2c2922] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-hand text-3xl font-bold">
+              Add to collection
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs leading-5 ink-muted">
+              Add {activeSelectionCount} selected clips to an existing saved
+              group.
+            </p>
+            <select
+              value={targetCollectionId}
+              onChange={event => setTargetCollectionId(event.target.value)}
+              className="h-10 w-full rounded-lg border-[1.5px] border-[#2c2922]/55 bg-[#fffdf7] px-3 text-sm outline-none focus:ring-2 focus:ring-[#e69275]"
+            >
+              {collections.map(collection => (
+                <option key={collection.id} value={collection.id}>
+                  {collection.name}
+                </option>
+              ))}
+            </select>
+            <Button
+              onClick={addSelectedToExistingCollection}
+              disabled={
+                !activeSelectionCount ||
+                !targetCollectionId ||
+                addClipToCollection.isPending
+              }
+              className="w-full rounded-xl border-[1.5px] border-[#2c2922] bg-[#f4ad89] text-xs font-bold text-[#2c2922] shadow-[2px_2px_0_#2c2922] hover:bg-[#fac7ae]"
+            >
+              {addClipToCollection.isPending && (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              )}
+              Add to collection
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <UploadFootageDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         projectId={selectedProjectForUpload}
       />
     </>
+  );
+}
+
+function SelectionActionBar({
+  selectedCount,
+  hasCollections,
+  creating,
+  adding,
+  onCreateCollection,
+  onAddToCollection,
+  onClear,
+}: {
+  selectedCount: number;
+  hasCollections: boolean;
+  creating: boolean;
+  adding: boolean;
+  onCreateCollection: () => void;
+  onAddToCollection: () => void;
+  onClear: () => void;
+}) {
+  if (selectedCount === 0) return null;
+
+  return (
+    <div className="sticky bottom-3 z-10 mt-6 rounded-2xl border-[1.5px] border-[#2c2922]/60 bg-[#fffdf7]/95 p-3 shadow-[3px_3px_0_rgba(44,41,34,.18)] backdrop-blur">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <span className="rounded-md bg-[#dcefdc] px-2 py-1 font-mono text-[10px] uppercase tracking-[.12em]">
+          {selectedCount} selected
+        </span>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={onCreateCollection}
+            disabled={creating}
+            className="h-8 rounded-lg border border-[#2c2922] bg-[#f4ad89] px-2.5 text-[11px] font-bold text-[#2c2922] shadow-[1px_1px_0_#2c2922] hover:bg-[#fac7ae]"
+          >
+            <Plus className="mr-1.5 size-3.5" />
+            Create collection
+          </Button>
+          {hasCollections && (
+            <Button
+              onClick={onAddToCollection}
+              disabled={adding}
+              className="h-8 rounded-lg border border-[#2c2922]/45 bg-[#fffdf7] px-2.5 text-[11px] font-bold text-[#2c2922] shadow-sm hover:bg-[#fff1ba]"
+            >
+              <FolderPlus className="mr-1.5 size-3.5" />
+              Add to collection
+            </Button>
+          )}
+          <Link
+            href="/ask"
+            className="inline-flex h-8 items-center rounded-lg border border-[#2c2922]/45 bg-[#fffdf7] px-2.5 text-[11px] font-bold text-[#2c2922] shadow-sm hover:bg-[#dcefdc]"
+          >
+            <Sparkles className="mr-1.5 size-3.5" />
+            Ask about selected
+          </Link>
+          <button
+            onClick={onClear}
+            className="inline-flex h-8 items-center rounded-lg px-2.5 text-[11px] font-semibold ink-muted hover:bg-[#f4f0e7] hover:text-[#2c2922]"
+          >
+            <X className="mr-1 size-3.5" />
+            Clear
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
