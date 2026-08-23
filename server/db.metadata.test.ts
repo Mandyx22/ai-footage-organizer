@@ -50,6 +50,11 @@ describe("clip metadata persistence", () => {
         subjects: ["person", "lake"],
         actions: ["sitting still", "looking toward water"],
         setting: "lakeside",
+        weather: [],
+        environmentType: "outdoor",
+        socialContext: "alone",
+        activityLevel: "low activity",
+        visualDensity: "sparse",
         spatialRelationships: [
           "one person isolated in a wide frame",
           "large empty space around subject",

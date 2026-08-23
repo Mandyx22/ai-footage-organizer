@@ -56,6 +56,29 @@ function metadataV2(
     subjects: string[];
     actions: string[];
     setting: string;
+    weather: string[];
+    environmentType: "indoor" | "outdoor" | "semi-outdoor" | "unknown";
+    socialContext:
+      | "alone"
+      | "pair"
+      | "small group"
+      | "crowd"
+      | "no people visible"
+      | "unknown";
+    activityLevel:
+      | "still"
+      | "low activity"
+      | "moderate activity"
+      | "active"
+      | "highly active"
+      | "unknown";
+    visualDensity:
+      | "minimal"
+      | "sparse"
+      | "balanced"
+      | "busy"
+      | "cluttered"
+      | "unknown";
     spatialRelationships: string[];
     time: string;
     lighting: string[];
@@ -82,6 +105,11 @@ function metadataV2(
       subjects: overrides.subjects ?? ["person", "street"],
       actions: overrides.actions ?? ["walking through street"],
       setting: overrides.setting ?? "city street",
+      weather: overrides.weather ?? [],
+      environmentType: overrides.environmentType ?? "outdoor",
+      socialContext: overrides.socialContext ?? "alone",
+      activityLevel: overrides.activityLevel ?? "moderate activity",
+      visualDensity: overrides.visualDensity ?? "balanced",
       spatialRelationships: overrides.spatialRelationships ?? [
         "person in foreground with street behind",
       ],
@@ -615,6 +643,24 @@ describe("protected footage procedures", () => {
     );
     expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
       "atmosphere"
+    );
+    expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
+      "weather"
+    );
+    expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
+      "environmentType"
+    );
+    expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
+      "socialContext"
+    );
+    expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
+      "activityLevel"
+    );
+    expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
+      "visualDensity"
+    );
+    expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
+      "cameraMotion is weak"
     );
     expect(JSON.stringify(mocks.analyzeFrames.mock.calls[0]?.[0])).toContain(
       "Do not infer or describe race"

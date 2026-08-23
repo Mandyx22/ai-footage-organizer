@@ -13,6 +13,42 @@ export type ClipMetadata = {
   possibleUses: string[];
 };
 
+export const ENVIRONMENT_TYPES = [
+  "indoor",
+  "outdoor",
+  "semi-outdoor",
+  "unknown",
+] as const;
+export const SOCIAL_CONTEXTS = [
+  "alone",
+  "pair",
+  "small group",
+  "crowd",
+  "no people visible",
+  "unknown",
+] as const;
+export const ACTIVITY_LEVELS = [
+  "still",
+  "low activity",
+  "moderate activity",
+  "active",
+  "highly active",
+  "unknown",
+] as const;
+export const VISUAL_DENSITIES = [
+  "minimal",
+  "sparse",
+  "balanced",
+  "busy",
+  "cluttered",
+  "unknown",
+] as const;
+
+export type EnvironmentType = (typeof ENVIRONMENT_TYPES)[number];
+export type SocialContext = (typeof SOCIAL_CONTEXTS)[number];
+export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
+export type VisualDensity = (typeof VISUAL_DENSITIES)[number];
+
 export type ClipMetadataV2 = {
   description: string;
   observed: {
@@ -20,6 +56,11 @@ export type ClipMetadataV2 = {
     subjects: string[];
     actions: string[];
     setting: string;
+    weather: string[];
+    environmentType: EnvironmentType;
+    socialContext: SocialContext;
+    activityLevel: ActivityLevel;
+    visualDensity: VisualDensity;
     spatialRelationships: string[];
     time: string;
     lighting: string[];
@@ -232,6 +273,11 @@ export type SearchDocument = {
     subjects: string[];
     actions: string[];
     setting: string;
+    weather: string[];
+    environmentType: EnvironmentType;
+    socialContext: SocialContext;
+    activityLevel: ActivityLevel;
+    visualDensity: VisualDensity;
     spatialRelationships: string[];
     time: string;
     lighting: string[];
@@ -259,6 +305,15 @@ function unique(values: string[]) {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(item => typeof item === "string");
+}
+
+function oneOf<const T extends readonly string[]>(
+  value: unknown,
+  values: T
+): T[number] {
+  return typeof value === "string" && values.includes(value)
+    ? (value as T[number])
+    : ("unknown" as T[number]);
 }
 
 function metadataJsonAsV2(value: unknown): ClipMetadataV2 | null {
@@ -300,6 +355,16 @@ function metadataJsonAsV2(value: unknown): ClipMetadataV2 | null {
       actions: isStringArray(metadata.observed.actions)
         ? metadata.observed.actions
         : [],
+      weather: isStringArray(metadata.observed.weather)
+        ? metadata.observed.weather
+        : [],
+      environmentType: oneOf(
+        metadata.observed.environmentType,
+        ENVIRONMENT_TYPES
+      ),
+      socialContext: oneOf(metadata.observed.socialContext, SOCIAL_CONTEXTS),
+      activityLevel: oneOf(metadata.observed.activityLevel, ACTIVITY_LEVELS),
+      visualDensity: oneOf(metadata.observed.visualDensity, VISUAL_DENSITIES),
       spatialRelationships: isStringArray(
         metadata.observed.spatialRelationships
       )
@@ -325,6 +390,11 @@ export function buildSearchDocument(clip: FootageClip): SearchDocument {
         subjects: metadata.observed.subjects,
         actions: metadata.observed.actions,
         setting: metadata.observed.setting,
+        weather: metadata.observed.weather,
+        environmentType: metadata.observed.environmentType,
+        socialContext: metadata.observed.socialContext,
+        activityLevel: metadata.observed.activityLevel,
+        visualDensity: metadata.observed.visualDensity,
         spatialRelationships: metadata.observed.spatialRelationships,
         time: metadata.observed.time,
         lighting: metadata.observed.lighting,
@@ -350,6 +420,11 @@ export function buildSearchDocument(clip: FootageClip): SearchDocument {
       subjects: clip.subjects,
       actions: [],
       setting: clip.setting,
+      weather: [],
+      environmentType: "unknown",
+      socialContext: "unknown",
+      activityLevel: "unknown",
+      visualDensity: "unknown",
       spatialRelationships: [],
       time: clip.time,
       lighting: clip.lighting,

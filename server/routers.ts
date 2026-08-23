@@ -2,11 +2,15 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import * as db from "./db";
 import {
+  ACTIVITY_LEVELS,
   buildCollectionSuggestions,
   DEMO_CLIPS,
+  ENVIRONMENT_TYPES,
   rankFootage,
   rankSimilar,
+  SOCIAL_CONTEXTS,
   toFootageClip,
+  VISUAL_DENSITIES,
   type ClipMetadataV2,
   type FootageClip,
 } from "./footage";
@@ -27,6 +31,11 @@ const metadataV2Schema = z
         subjects: z.array(z.string()),
         actions: z.array(z.string()),
         setting: z.string(),
+        weather: z.array(z.string()),
+        environmentType: z.enum(ENVIRONMENT_TYPES),
+        socialContext: z.enum(SOCIAL_CONTEXTS),
+        activityLevel: z.enum(ACTIVITY_LEVELS),
+        visualDensity: z.enum(VISUAL_DENSITIES),
         spatialRelationships: z.array(z.string()),
         time: z.string(),
         lighting: z.array(z.string()),
@@ -79,7 +88,7 @@ const demoCollections = [
 ];
 
 const FRAME_ANALYSIS_SYSTEM_PROMPT =
-  'You analyze several sampled frames from one video for a personal footage library. The sampled frames are multiple views of one video clip, not separate clips. Return one combined clip-level Metadata V2 analysis. Keep observed visual facts, subjective interpretation, and creative editing suggestions separated. Description must be one concise but specific grounded clip-level sentence that includes relevant visual action or context when supported and never gives editing advice. Observed fields must contain only visual facts or visually supported attributes. visibleFacts should be factual visual observations only. actions should be concise visually supported activity or behavior phrases such as "walking with luggage", "standing still", or "eating at a table"; avoid unsupported temporal or narrative assumptions. spatialRelationships should describe visible subject/object arrangement and composition such as "one person isolated in a wide frame", "crowd behind foreground subject", or "large empty space around subject"; keep it spatial, not psychological or narrative. mood is subjective emotional or semantic tone, not objective fact. atmosphere is concise sensory or visual ambience such as "warm", "soft", "hazy", "spacious", "dim", "rainy", "chaotic", "intimate", "airy", or "still"; keep it separate from mood. sceneInterpretation should be a concise semantic reading of the scene without inventing backstory. Uncertainty should contain short natural-language caveats only where useful; use an empty array if none are useful. Creative editingUses should contain editorial suggestions only. Use lower-case concise English tags for arrays. Use "unknown" for cameraMotion or other fields when the frames do not provide enough evidence. Do not infer or describe race, ethnicity, gender identity, exact age, private identity, unsupported relationships, unsupported exact locations, emotional state as objective fact, or fictional backstory. Prefer person / people, visually supported action, spatial facts, and cautious interpretation. Return exactly one JSON object that matches the schema. Never return a top-level array.';
+  'You analyze several sampled frames from one video for a personal footage library. The sampled frames are multiple views of one video clip, not separate clips. Return one combined clip-level Metadata V2 analysis. Keep observed visual facts, subjective interpretation, and creative editing suggestions separated. Description must be one concise but specific grounded clip-level sentence that includes relevant visual action or context when supported and never gives editing advice. Observed fields must contain only visual facts or visually supported attributes. visibleFacts should be factual visual observations only. actions should be concise visually supported activity or behavior phrases such as "walking with luggage", "standing still", or "eating at a table"; avoid unsupported temporal or narrative assumptions. weather should list only visibly supported weather or environmental conditions such as "rainy", "foggy", "sunny", "overcast", or "snowy"; use an empty array when unsupported. environmentType should classify only the physical environment as indoor, outdoor, semi-outdoor, or unknown. socialContext should describe visible people arrangement only: alone, pair, small group, crowd, no people visible, or unknown; never infer couple, family, friends, or relationships. activityLevel should describe how much visible activity is happening in the scene, separate from actions and camera motion. visualDensity should describe frame busyness or amount of visual content, separate from crowd/socialContext and atmosphere. spatialRelationships should describe visible subject/object arrangement and composition such as "one person isolated in a wide frame", "crowd behind foreground subject", or "large empty space around subject"; keep it spatial, not psychological or narrative. cameraMotion is weak because sampled frames are still images; prefer cautious values such as "unknown", "likely static", "likely handheld", "likely moving", or "likely tracking"; avoid precise pan, tilt, or zoom claims unless strongly supported across frames. mood is subjective emotional or semantic tone, not objective fact. atmosphere is concise sensory or visual ambience such as "warm", "soft", "hazy", "spacious", "dim", "rainy", "chaotic", "intimate", "airy", or "still"; keep it separate from mood. sceneInterpretation should be a concise semantic reading of the scene without inventing backstory. Uncertainty should contain short natural-language caveats only where useful; use an empty array if none are useful. Creative editingUses should contain editorial suggestions only. Use lower-case concise English tags for arrays. Do not infer or describe race, ethnicity, gender identity, exact age, private identity, unsupported relationships, unsupported exact locations, emotional state as objective fact, or fictional backstory. Prefer person / people, visually supported action, spatial facts, and cautious interpretation. Return exactly one JSON object that matches the schema. Never return a top-level array.';
 
 const FRAME_ANALYSIS_RESPONSE_SCHEMA = {
   name: "footage_metadata",
@@ -95,6 +104,11 @@ const FRAME_ANALYSIS_RESPONSE_SCHEMA = {
           subjects: { type: "array", items: { type: "string" } },
           actions: { type: "array", items: { type: "string" } },
           setting: { type: "string" },
+          weather: { type: "array", items: { type: "string" } },
+          environmentType: { type: "string", enum: [...ENVIRONMENT_TYPES] },
+          socialContext: { type: "string", enum: [...SOCIAL_CONTEXTS] },
+          activityLevel: { type: "string", enum: [...ACTIVITY_LEVELS] },
+          visualDensity: { type: "string", enum: [...VISUAL_DENSITIES] },
           spatialRelationships: { type: "array", items: { type: "string" } },
           time: { type: "string" },
           lighting: { type: "array", items: { type: "string" } },
@@ -107,6 +121,11 @@ const FRAME_ANALYSIS_RESPONSE_SCHEMA = {
           "subjects",
           "actions",
           "setting",
+          "weather",
+          "environmentType",
+          "socialContext",
+          "activityLevel",
+          "visualDensity",
           "spatialRelationships",
           "time",
           "lighting",

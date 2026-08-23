@@ -8,6 +8,10 @@ import {
   toFootageClip,
   type ClipMetadataV2,
   type FootageClip,
+  type ActivityLevel,
+  type EnvironmentType,
+  type SocialContext,
+  type VisualDensity,
 } from "./footage";
 
 function testClip(
@@ -43,6 +47,11 @@ function metadataV2(
     subjects: string[];
     actions: string[];
     setting: string;
+    weather: string[];
+    environmentType: EnvironmentType;
+    socialContext: SocialContext;
+    activityLevel: ActivityLevel;
+    visualDensity: VisualDensity;
     spatialRelationships: string[];
     time: string;
     lighting: string[];
@@ -62,6 +71,11 @@ function metadataV2(
       subjects: overrides.subjects ?? ["person", "lake"],
       actions: overrides.actions ?? ["sitting still"],
       setting: overrides.setting ?? "lakeside",
+      weather: overrides.weather ?? [],
+      environmentType: overrides.environmentType ?? "outdoor",
+      socialContext: overrides.socialContext ?? "alone",
+      activityLevel: overrides.activityLevel ?? "low activity",
+      visualDensity: overrides.visualDensity ?? "sparse",
       spatialRelationships: overrides.spatialRelationships ?? [
         "one person isolated in a wide frame",
       ],
@@ -138,6 +152,11 @@ describe("footage retrieval", () => {
       "sunset outside",
     ]);
     expect(document.observed.actions).toEqual(["sitting still"]);
+    expect(document.observed.weather).toEqual([]);
+    expect(document.observed.environmentType).toBe("outdoor");
+    expect(document.observed.socialContext).toBe("alone");
+    expect(document.observed.activityLevel).toBe("low activity");
+    expect(document.observed.visualDensity).toBe("sparse");
     expect(document.observed.spatialRelationships).toEqual([
       "one person isolated in a wide frame",
     ]);
@@ -172,6 +191,11 @@ describe("footage retrieval", () => {
         subjects: ["train"],
         actions: [],
         setting: "station",
+        weather: [],
+        environmentType: "unknown",
+        socialContext: "unknown",
+        activityLevel: "unknown",
+        visualDensity: "unknown",
         spatialRelationships: [],
       },
       interpretation: {
@@ -402,11 +426,38 @@ describe("footage retrieval", () => {
     });
 
     expect(clip.metadataJson?.observed.actions).toEqual([]);
+    expect(clip.metadataJson?.observed.weather).toEqual([]);
+    expect(clip.metadataJson?.observed.environmentType).toBe("unknown");
+    expect(clip.metadataJson?.observed.socialContext).toBe("unknown");
+    expect(clip.metadataJson?.observed.activityLevel).toBe("unknown");
+    expect(clip.metadataJson?.observed.visualDensity).toBe("unknown");
     expect(clip.metadataJson?.observed.spatialRelationships).toEqual([]);
     expect(clip.metadataJson?.interpretation.atmosphere).toEqual([]);
     expect(buildSearchDocument(clip).observed.subjects).toEqual([
       "person",
       "lake",
     ]);
+  });
+
+  it("normalizes invalid controlled Metadata V2 values to unknown", () => {
+    const clip = testClip(779, {
+      metadataJson: {
+        ...metadataV2(),
+        observed: {
+          ...metadataV2().observed,
+          environmentType: "spaceship" as EnvironmentType,
+          socialContext: "best friends" as SocialContext,
+          activityLevel: "frantic" as ActivityLevel,
+          visualDensity: "too much" as VisualDensity,
+        },
+      },
+    });
+
+    expect(clip.metadataJson?.observed.environmentType).toBe("spaceship");
+    const document = buildSearchDocument(clip);
+    expect(document.observed.environmentType).toBe("unknown");
+    expect(document.observed.socialContext).toBe("unknown");
+    expect(document.observed.activityLevel).toBe("unknown");
+    expect(document.observed.visualDensity).toBe("unknown");
   });
 });
