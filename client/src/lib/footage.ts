@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 
 export type Clip = {
   id: number;
-  projectId?: number | null;
+  projectIds: number[];
   fileName: string;
   durationMs: number;
   thumbnailUrl: string | null;

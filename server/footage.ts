@@ -96,7 +96,7 @@ export function metadataV2ToLegacy(metadata: ClipMetadataV2): ClipMetadata {
 
 export type FootageClip = ClipMetadata & {
   id: number;
-  projectId?: number | null;
+  projectIds: number[];
   fileName: string;
   durationMs: number;
   thumbnailUrl: string | null;
@@ -106,7 +106,7 @@ export type FootageClip = ClipMetadata & {
   metadataJson?: ClipMetadataV2 | null;
 };
 
-export type CollectionSuggestion = {
+export type ProjectSuggestion = {
   id: string;
   name: string;
   description: string;
@@ -123,6 +123,7 @@ const p = (
   metadata: ClipMetadata
 ): FootageClip => ({
   id,
+  projectIds: [],
   fileName,
   durationMs,
   thumbnailUrl: null,
@@ -135,8 +136,8 @@ const p = (
 export const DEMO_CLIPS: FootageClip[] = [
   p(101, "IMG_4821.MOV", 8200, {
     description:
-      "Two friends crossing a cobalt-blue side street under neon signs.",
-    subjects: ["friends", "people"],
+      "Two people crossing a cobalt-blue side street under neon signs.",
+    subjects: ["people"],
     setting: "city street",
     time: "night",
     lighting: ["neon", "low light"],
@@ -161,8 +162,8 @@ export const DEMO_CLIPS: FootageClip[] = [
   }),
   p(103, "IMG_4887.MOV", 6100, {
     description:
-      "Steam rises from ramen bowls as friends laugh across a wooden table.",
-    subjects: ["food", "friends"],
+      "Steam rises from ramen bowls as people laugh across a wooden table.",
+    subjects: ["food", "people"],
     setting: "restaurant",
     time: "night",
     lighting: ["warm practical", "low light"],
@@ -211,8 +212,8 @@ export const DEMO_CLIPS: FootageClip[] = [
     possibleUses: ["breathing room", "detail cutaway"],
   }),
   p(107, "IMG_4951.MOV", 7600, {
-    description: "Friends lean into the frame beneath a glowing shop sign.",
-    subjects: ["friends", "people"],
+    description: "People lean into the frame beneath a glowing shop sign.",
+    subjects: ["people"],
     setting: "city street",
     time: "night",
     lighting: ["neon", "mixed"],
@@ -241,7 +242,7 @@ const synonyms: Record<string, string[]> = {
   quiet: ["calm", "reflective", "still", "intimate", "lonely", "quiet"],
   blue: ["blue", "cobalt", "violet", "neon", "cool", "slate"],
   night: ["night", "dusk", "neon", "low light"],
-  people: ["friends", "people", "hands", "cyclist"],
+  people: ["people", "hands", "cyclist"],
   warm: ["amber", "golden", "warm", "cream", "yellow"],
   transition: ["transition", "cutaway", "breathing room"],
   dreamy: ["dreamy", "reflective", "nostalgic", "soft"],
@@ -590,79 +591,106 @@ export function rankFootage(clips: FootageClip[], query: string) {
     });
 }
 
+export type SimilarityDimension =
+  | "all"
+  | "color"
+  | "mood"
+  | "lighting"
+  | "subject"
+  | "composition"
+  | "motion";
+
+const SIMILARITY_DIMENSIONS: Record<
+  Exclude<SimilarityDimension, "all">,
+  (document: SearchDocument) => string[]
+> = {
+  color: document => document.observed.colors,
+  mood: document => document.interpretation.mood,
+  lighting: document => document.observed.lighting,
+  subject: document => [
+    ...document.observed.subjects,
+    ...document.observed.visibleFacts,
+  ],
+  composition: document => [document.observed.shotType],
+  motion: document => [document.observed.cameraMotion],
+};
+
 export function rankSimilar(
   clips: FootageClip[],
   referenceId: number,
-  dimension = "all"
+  dimension: SimilarityDimension = "all"
 ) {
   const reference = clips.find(clip => clip.id === referenceId);
   if (!reference) return [];
-  const comparisons: Record<string, (clip: FootageClip) => string[]> = {
-    color: clip => clip.colors,
-    mood: clip => clip.mood,
-    lighting: clip => clip.lighting,
-    subject: clip => clip.subjects,
-    composition: clip => [clip.shotType],
-    motion: clip => [clip.cameraMotion],
-  };
-  const enabled = dimension === "all" ? Object.keys(comparisons) : [dimension];
+  const enabled =
+    dimension === "all"
+      ? (Object.keys(
+          SIMILARITY_DIMENSIONS
+        ) as Exclude<SimilarityDimension, "all">[])
+      : ([dimension] as Exclude<SimilarityDimension, "all">[]);
+  const referenceDocument = buildSearchDocument(reference);
   const overlap = (a: string[], b: string[]) =>
     a.filter(value => b.includes(value)).length;
   return clips
     .filter(clip => clip.id !== reference.id)
-    .map(clip => ({
-      clip,
-      score: enabled.reduce(
-        (score, key) =>
-          score +
-          overlap(
-            comparisons[key]?.(reference) ?? [],
-            comparisons[key]?.(clip) ?? []
-          ),
-        0
-      ),
-    }))
+    .map(clip => {
+      const document = buildSearchDocument(clip);
+      return {
+        clip,
+        score: enabled.reduce(
+          (score, key) =>
+            score +
+            overlap(
+              SIMILARITY_DIMENSIONS[key](referenceDocument),
+              SIMILARITY_DIMENSIONS[key](document)
+            ),
+          0
+        ),
+      };
+    })
     .filter(item => item.score > 0)
     .sort((a, b) => b.score - a.score);
 }
 
-export function buildCollectionSuggestions(
+export function buildProjectSuggestions(
   clips: FootageClip[]
-): CollectionSuggestion[] {
+): ProjectSuggestion[] {
   const groups = [
     {
       id: "night-stories",
       name: "Night stories",
       description: "Neon, low light and the moments after dark.",
       accent: "violet",
-      matches: (clip: FootageClip) =>
-        clip.time === "night" ||
-        clip.lighting.some(value => value.includes("neon")),
+      matches: (document: SearchDocument) =>
+        document.observed.time === "night" ||
+        document.observed.lighting.some(value => value.includes("neon")),
     },
     {
       id: "quiet-in-between",
       name: "Quiet in-between",
       description: "Still, reflective material for breathing room.",
       accent: "amber",
-      matches: (clip: FootageClip) =>
-        clip.mood.some(value =>
+      matches: (document: SearchDocument) =>
+        document.interpretation.mood.some(value =>
           ["quiet", "calm", "reflective", "nostalgic", "lonely"].includes(value)
-        ) || clip.cameraMotion === "static",
+        ) || document.observed.cameraMotion === "static",
     },
     {
       id: "human-moments",
       name: "Human moments",
-      description: "People, hands, laughter and memory-making details.",
+      description: "People, hands and the details of everyday life.",
       accent: "lime",
-      matches: (clip: FootageClip) =>
-        clip.subjects.some(value =>
-          ["friends", "people", "hands", "cyclist"].includes(value)
+      matches: (document: SearchDocument) =>
+        document.observed.subjects.some(value =>
+          ["people", "hands", "cyclist"].includes(value)
         ),
     },
   ];
   return groups
     .map(group => {
-      const matches = clips.filter(group.matches);
+      const matches = clips.filter(clip =>
+        group.matches(buildSearchDocument(clip))
+      );
       return {
         id: group.id,
         name: group.name,
@@ -685,10 +713,10 @@ function safeArray(value: string, fallback: string[] = []) {
   }
 }
 
-export function toFootageClip(clip: Clip): FootageClip {
+export function toFootageClip(clip: Clip, projectIds: number[] = []): FootageClip {
   return {
     id: clip.id,
-    projectId: clip.projectId,
+    projectIds,
     fileName: clip.fileName,
     durationMs: clip.durationMs,
     thumbnailUrl: clip.thumbnailUrl,

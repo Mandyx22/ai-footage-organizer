@@ -27,7 +27,7 @@ The MVP treats the creative process as retrieval and discovery. A creator may re
 
 | Product area | User capability | MVP requirement |
 | --- | --- | --- |
-| Upload | Add several video files by browse or drag-and-drop. | Validate video type and size, display visible progress, sample a representative frame, and save the selected video to the authenticated workspace. |
+| Upload | Add several video files by browse or drag-and-drop. | Validate video type and size, display visible progress, sample multiple frames across the clip, and save the selected video to the workspace. |
 | Structured metadata | Receive useful AI labels without manual tagging. | Generate strict JSON for description, subject, setting, time, lighting, colors, mood, shot type, camera motion, and possible uses. |
 | Library | Browse clips visually and scan useful metadata. | Show thumbnail, filename, duration, description, mood, shot type, and filters. |
 | Natural-language search | Search via memory-like phrases. | Match an expressive query to structured metadata and explain the matching cues on each result. |
@@ -39,7 +39,7 @@ The MVP treats the creative process as retrieval and discovery. A creator may re
 
 | Stage | Creator action | Product response | Success signal |
 | --- | --- | --- | --- |
-| Ingest | Select several raw clips. | Samples a frame, analyzes visual signals, uploads the original, and shows progress. | Clip becomes `ready` with a thumbnail and structured metadata. |
+| Ingest | Select several raw clips. | Samples frames across the clip, analyzes visual signals, uploads the original, and shows progress. | Clip becomes `ready` with a thumbnail and structured metadata. |
 | Explore | Browses the visual library and taps filters. | Shows descriptive cards rather than opaque filenames. | Creator recognizes material they had forgotten. |
 | Retrieve | Searches “quiet blue night shots”. | Ranks clips using metadata and shows which query cues matched. | A relevant clip appears without manual file hunting. |
 | Refine | Opens a promising clip and invokes Find Similar. | Returns related footage by an explicit similarity dimension. | Creator can gather visually coherent material. |
@@ -51,7 +51,7 @@ The MVP treats the creative process as retrieval and discovery. A creator may re
 | ID | Requirement | Acceptance criteria |
 | --- | --- | --- |
 | FR-01 | File intake | The interface supports click selection and drag-and-drop of multiple `video/*` files, rejects unsupported files, and explains the prototype size limit. |
-| FR-02 | Representative-frame analysis | The browser samples a frame after metadata loads. The server invokes a multimodal model only after explicit creator action and validates the strict metadata schema. |
+| FR-02 | Frame-sampling analysis | The browser samples several frames across the clip after metadata loads. The server invokes a multimodal model only after explicit creator action and validates the strict metadata schema. |
 | FR-03 | Secure persistence | A user can only upload and attach media to a clip record that belongs to their authenticated workspace. Video bytes remain in object storage rather than database fields. |
 | FR-04 | Library cards | Every ready clip presents a thumbnail, duration, short visual description, and at least mood plus shot-type labels. |
 | FR-05 | Retrieval | A natural-language query returns only clips with a non-zero metadata score and visibly identifies matching cues. |

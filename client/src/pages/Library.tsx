@@ -68,7 +68,7 @@ export default function Library() {
   const similar = trpc.footage.sampleSimilar.useQuery(similarInput, {
     enabled: Boolean(focusedClipId && showSimilar),
   });
-  const sampleCollections = trpc.collections.sampleList.useQuery();
+  const sampleProjects = trpc.projects.sampleList.useQuery();
   const sampleSource = getScopedLibrarySource(library.data, "sample");
   const baseClips = sampleSource.clips as Clip[];
   const derivedClips = showSimilar
@@ -340,26 +340,26 @@ export default function Library() {
               </div>
               <div className="note-pink rounded-2xl border-[1.5px] border-[#2c2922]/48 p-4 shadow-[2px_2px_0_rgba(44,41,34,.12)]">
                 <p className="font-hand text-xl font-bold">
-                  Sample collections
+                  Suggested sample projects
                 </p>
                 <p className="mt-1 text-xs leading-5 ink-muted">
                   Fictional groupings made only from the demo clips.
                 </p>
                 <div className="mt-3 space-y-2">
-                  {(sampleCollections.data?.collections ?? []).map(
-                    collection => (
+                  {(sampleProjects.data?.projects ?? []).map(
+                    project => (
                       <button
-                        key={collection.id}
+                        key={project.id}
                         onClick={() =>
                           toast.info(
-                            `${collection.name}: ${collection.description}`
+                            `${project.name}: ${project.description}`
                           )
                         }
                         className="flex w-full items-center justify-between rounded-lg border border-[#2c2922]/25 bg-[#fffdf7]/75 px-2.5 py-2 text-left text-[11px] font-semibold"
                       >
-                        <span className="truncate">{collection.name}</span>
+                        <span className="truncate">{project.name}</span>
                         <span className="ml-2 shrink-0 text-[10px] ink-muted">
-                          {collection.clipCount} clips
+                          {project.clipCount} clips
                         </span>
                       </button>
                     )

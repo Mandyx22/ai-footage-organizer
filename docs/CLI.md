@@ -105,7 +105,7 @@ pnpm framefind plan "a reflective city opener" \
 | Keep a portable local JSON inventory | CLI `index` |
 | Make a separate local edit folder without touching originals | CLI `organize` |
 | Add visual notes from a representative frame | CLI `analyze --confirm-ai` or the web upload flow |
-| Browse rich thumbnails, make collections, and use a visual selection interface | Web workspace |
+| Browse rich thumbnails, group clips into projects, and use a visual selection interface | Web workspace |
 | Ask a creative question from a hand-picked visual group | Web **Ask My Footage** or CLI `plan` |
 
 The two routes currently have separate storage. The CLI index is intentionally portable and local; it does not silently synchronize into the web database. A future import/export bridge can be added once the desired cross-device privacy model is defined.

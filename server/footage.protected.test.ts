@@ -2,33 +2,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
 const mocks = vi.hoisted(() => ({
-  createCollection: vi.fn(),
-  addClipToCollection: vi.fn(),
+  addClipToProject: vi.fn(),
   createAnalyzedClip: vi.fn(),
   createEditingProject: vi.fn(),
   deleteClipForUser: vi.fn(),
-  listCollectionClipCountsForUser: vi.fn(),
   listClipsForUser: vi.fn(),
   listEditingProjectsForUser: vi.fn(),
-  listCollectionsForUser: vi.fn(),
+  listProjectClipMemberships: vi.fn(),
+  removeClipFromProject: vi.fn(),
   analyzeFrames: vi.fn(),
   listLLMModels: vi.fn(),
-  moveClipToEditingProject: vi.fn(),
   invokeLLM: vi.fn(),
   storagePut: vi.fn(),
   userOwnsEditingProject: vi.fn(),
 }));
 
 vi.mock("./db", () => ({
-  createCollection: mocks.createCollection,
-  addClipToCollection: mocks.addClipToCollection,
+  addClipToProject: mocks.addClipToProject,
   createEditingProject: mocks.createEditingProject,
   deleteClipForUser: mocks.deleteClipForUser,
   listClipsForUser: mocks.listClipsForUser,
   listEditingProjectsForUser: mocks.listEditingProjectsForUser,
-  listCollectionClipCountsForUser: mocks.listCollectionClipCountsForUser,
-  listCollectionsForUser: mocks.listCollectionsForUser,
-  moveClipToEditingProject: mocks.moveClipToEditingProject,
+  listProjectClipMemberships: mocks.listProjectClipMemberships,
+  removeClipFromProject: mocks.removeClipFromProject,
   createAnalyzedClip: mocks.createAnalyzedClip,
   userOwnsEditingProject: mocks.userOwnsEditingProject,
 }));
@@ -196,8 +192,7 @@ function createPrototypeContext(): TrpcContext {
 describe("protected footage procedures", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.listCollectionsForUser.mockResolvedValue([]);
-    mocks.listCollectionClipCountsForUser.mockResolvedValue([]);
+    mocks.listProjectClipMemberships.mockResolvedValue([]);
   });
 
   it("keeps My Library personal by returning no sample fallback when the user has no clips", async () => {
@@ -211,6 +206,9 @@ describe("protected footage procedures", () => {
   });
 
   it("returns the authenticated creator's uploaded clips through My Library", async () => {
+    mocks.listProjectClipMemberships.mockResolvedValue([
+      { projectId: 12, clipId: 333 },
+    ]);
     mocks.listClipsForUser.mockResolvedValue([
       {
         id: 333,
@@ -248,6 +246,7 @@ describe("protected footage procedures", () => {
       fileName: "my-upload.mov",
       mood: ["quiet"],
     });
+    expect(result.clips[0].projectIds).toEqual([12]);
 
     const sample = await caller.footage.sampleList();
     expect(sample.mode).toBe("sample");
@@ -350,41 +349,43 @@ describe("protected footage procedures", () => {
     expect(mocks.listClipsForUser).toHaveBeenCalledWith(42, undefined);
   });
 
-  it("creates a collection and persists selected clip membership for its owner", async () => {
-    mocks.createCollection.mockResolvedValue({
+  it("creates an editing project and adds a clip to it for its owner", async () => {
+    mocks.createEditingProject.mockResolvedValue({
       id: 77,
       userId: 9,
       name: "Night out",
-      description: null,
+      description: "Neon material",
       accent: "violet",
       isAiSuggested: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
-    mocks.addClipToCollection.mockResolvedValue(true);
+    mocks.addClipToProject.mockResolvedValue(true);
     const caller = appRouter.createCaller(createAuthenticatedContext());
 
-    const collection = await caller.collections.create({
+    const project = await caller.projects.create({
       name: "Night out",
       description: "Neon material",
     });
-    const membership = await caller.collections.addClip({
-      collectionId: 77,
+    const membership = await caller.footage.addToProject({
+      projectId: 77,
       clipId: 101,
     });
 
-    expect(collection).toMatchObject({ id: 77, name: "Night out" });
-    expect(mocks.createCollection).toHaveBeenCalledWith(
+    expect(project).toMatchObject({ id: 77, name: "Night out" });
+    expect(mocks.createEditingProject).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 9, name: "Night out" })
     );
     expect(membership).toEqual({ success: true });
-    expect(mocks.addClipToCollection).toHaveBeenCalledWith({
+    expect(mocks.addClipToProject).toHaveBeenCalledWith({
       userId: 9,
-      collectionId: 77,
+      projectId: 77,
       clipId: 101,
     });
   });
 
-  it("returns saved collection clip counts for the authenticated workspace", async () => {
-    mocks.listCollectionsForUser.mockResolvedValue([
+  it("returns project clip counts and loose clips for the authenticated workspace", async () => {
+    mocks.listEditingProjectsForUser.mockResolvedValue([
       {
         id: 77,
         userId: 9,
@@ -406,19 +407,23 @@ describe("protected footage procedures", () => {
         updatedAt: new Date(),
       },
     ]);
-    mocks.listCollectionClipCountsForUser.mockResolvedValue([
-      { collectionId: 77, clipCount: 3 },
+    mocks.listProjectClipMemberships.mockResolvedValue([
+      { projectId: 77, clipId: 333 },
+    ]);
+    mocks.listClipsForUser.mockResolvedValue([
+      { id: 333, userId: 9, fileName: "my-upload.mov" },
+      { id: 334, userId: 9, fileName: "stray.mov" },
     ]);
     const caller = appRouter.createCaller(createAuthenticatedContext());
 
-    const result = await caller.collections.personalList();
+    const result = await caller.projects.list();
 
-    expect(result.mode).toBe("personal");
-    expect(result.collections).toEqual([
-      expect.objectContaining({ id: 77, clipCount: 3 }),
+    expect(result.projects).toEqual([
+      expect.objectContaining({ id: 77, clipCount: 1 }),
       expect.objectContaining({ id: 78, clipCount: 0 }),
     ]);
-    expect(mocks.listCollectionClipCountsForUser).toHaveBeenCalledWith(9);
+    expect(result.unassignedCount).toBe(1);
+    expect(mocks.listProjectClipMemberships).toHaveBeenCalledWith(9);
   });
 
   it("creates editing projects and scopes their clip counts to the authenticated workspace", async () => {
@@ -428,6 +433,9 @@ describe("protected footage procedures", () => {
       name: "Taipei diary",
       description: null,
       accent: "peach",
+      isAiSuggested: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
     mocks.listEditingProjectsForUser.mockResolvedValue([
       {
@@ -440,8 +448,11 @@ describe("protected footage procedures", () => {
         updatedAt: new Date(),
       },
     ]);
+    mocks.listProjectClipMemberships.mockResolvedValue([
+      { projectId: 12, clipId: 333 },
+    ]);
     mocks.listClipsForUser.mockResolvedValue([
-      { id: 333, userId: 9, projectId: 12, fileName: "my-upload.mov" },
+      { id: 333, userId: 9, fileName: "my-upload.mov" },
     ]);
     const caller = appRouter.createCaller(createAuthenticatedContext());
 
@@ -456,13 +467,16 @@ describe("protected footage procedures", () => {
     expect(list.unassignedCount).toBe(0);
   });
 
-  it("scopes projects and collections to the prototype workspace user", async () => {
+  it("scopes projects and clip memberships to the prototype workspace user", async () => {
     mocks.createEditingProject.mockResolvedValue({
       id: 18,
       userId: 42,
       name: "Summer memory",
       description: null,
       accent: "peach",
+      isAiSuggested: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
     mocks.listEditingProjectsForUser.mockResolvedValue([
       {
@@ -475,58 +489,108 @@ describe("protected footage procedures", () => {
         updatedAt: new Date(),
       },
     ]);
-    mocks.listClipsForUser.mockResolvedValue([
-      { id: 444, userId: 42, projectId: 18, fileName: "prototype-upload.mov" },
+    mocks.listProjectClipMemberships.mockResolvedValue([
+      { projectId: 18, clipId: 444 },
     ]);
-    mocks.createCollection.mockResolvedValue({
-      id: 88,
-      userId: 42,
-      name: "Warm quiet",
-      description: null,
-      accent: "violet",
-      isAiSuggested: false,
-    });
-    mocks.addClipToCollection.mockResolvedValue(true);
+    mocks.listClipsForUser.mockResolvedValue([
+      { id: 444, userId: 42, fileName: "prototype-upload.mov" },
+    ]);
+    mocks.addClipToProject.mockResolvedValue(true);
+    mocks.removeClipFromProject.mockResolvedValue(true);
     const caller = appRouter.createCaller(createPrototypeContext());
 
     const project = await caller.projects.create({ name: "Summer memory" });
     const projects = await caller.projects.list();
-    const collection = await caller.collections.create({ name: "Warm quiet" });
-    const membership = await caller.collections.addClip({
-      collectionId: 88,
+    const added = await caller.footage.addToProject({
+      projectId: 18,
+      clipId: 444,
+    });
+    const removed = await caller.footage.removeFromProject({
+      projectId: 18,
       clipId: 444,
     });
 
     expect(project).toMatchObject({ id: 18, userId: 42 });
     expect(projects.projects[0]).toMatchObject({ id: 18, clipCount: 1 });
-    expect(collection).toMatchObject({ id: 88, userId: 42 });
-    expect(membership).toEqual({ success: true });
+    expect(added).toEqual({ success: true });
+    expect(removed).toEqual({ success: true });
     expect(mocks.createEditingProject).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 42 })
     );
     expect(mocks.listEditingProjectsForUser).toHaveBeenCalledWith(42);
-    expect(mocks.createCollection).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 42 })
-    );
-    expect(mocks.addClipToCollection).toHaveBeenCalledWith({
+    expect(mocks.addClipToProject).toHaveBeenCalledWith({
       userId: 42,
-      collectionId: 88,
+      projectId: 18,
+      clipId: 444,
+    });
+    expect(mocks.removeClipFromProject).toHaveBeenCalledWith({
+      userId: 42,
+      projectId: 18,
       clipId: 444,
     });
   });
 
-  it("moves and deletes only clips available in the authenticated workspace", async () => {
-    mocks.moveClipToEditingProject.mockResolvedValue(true);
+  it("derives suggested editing projects from the user's own clips", async () => {
+    const clipRow = {
+      id: 333,
+      userId: 9,
+      fileName: "my-upload.mov",
+      mimeType: "video/quicktime",
+      sizeBytes: 128,
+      durationMs: 1_200,
+      status: "ready",
+      storageKey: "clips/333.mov",
+      mediaUrl: "/manus-storage/clips/333.mov",
+      thumbnailUrl: null,
+      description: "A neon street at night.",
+      subjects: '["street"]',
+      setting: "city street",
+      timeOfDay: "night",
+      lighting: '["neon"]',
+      colors: '["blue"]',
+      moods: '["lively"]',
+      shotType: "wide",
+      cameraMotion: "static",
+      possibleUses: '["night montage"]',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    mocks.listClipsForUser.mockResolvedValue([
+      { ...clipRow, id: 333 },
+      { ...clipRow, id: 334 },
+    ]);
+    const caller = appRouter.createCaller(createAuthenticatedContext());
+
+    const result = await caller.projects.suggestions();
+
+    expect(
+      result.projects.some(project => project.name === "Night stories")
+    ).toBe(true);
+    expect(result.projects[0]?.clipIds).toEqual([333, 334]);
+    expect(mocks.listClipsForUser).toHaveBeenCalledWith(9);
+  });
+
+  it("adds to, removes from, and deletes only clips available in the authenticated workspace", async () => {
+    mocks.addClipToProject.mockResolvedValue(true);
+    mocks.removeClipFromProject.mockResolvedValue(true);
     mocks.deleteClipForUser.mockResolvedValue(true);
     const caller = appRouter.createCaller(createAuthenticatedContext());
 
     await expect(
-      caller.footage.moveToProject({ clipId: 333, projectId: 12 })
+      caller.footage.addToProject({ clipId: 333, projectId: 12 })
+    ).resolves.toEqual({ success: true });
+    await expect(
+      caller.footage.removeFromProject({ clipId: 333, projectId: 12 })
     ).resolves.toEqual({ success: true });
     await expect(caller.footage.delete({ clipId: 333 })).resolves.toEqual({
       success: true,
     });
-    expect(mocks.moveClipToEditingProject).toHaveBeenCalledWith({
+    expect(mocks.addClipToProject).toHaveBeenCalledWith({
+      userId: 9,
+      clipId: 333,
+      projectId: 12,
+    });
+    expect(mocks.removeClipFromProject).toHaveBeenCalledWith({
       userId: 9,
       clipId: 333,
       projectId: 12,

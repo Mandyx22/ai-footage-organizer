@@ -3,7 +3,7 @@ import { z } from "zod";
 import * as db from "./db";
 import {
   ACTIVITY_LEVELS,
-  buildCollectionSuggestions,
+  buildProjectSuggestions,
   DEMO_CLIPS,
   ENVIRONMENT_TYPES,
   rankFootage,
@@ -60,7 +60,7 @@ const metadataV2Schema = z
   })
   .strict();
 
-const demoCollections = [
+const demoProjects = [
   {
     id: -1,
     name: "Tokyo after dark",
@@ -160,18 +160,23 @@ const FRAME_ANALYSIS_RESPONSE_SCHEMA = {
   },
 } as const;
 
-async function collectionsWithCounts(userId: number) {
-  const [rows, counts] = await Promise.all([
-    db.listCollectionsForUser(userId),
-    db.listCollectionClipCountsForUser(userId),
+async function personalClipsWithMembership(
+  userId: number,
+  projectId?: number | null
+): Promise<FootageClip[]> {
+  const [clips, memberships] = await Promise.all([
+    db.listClipsForUser(userId, projectId),
+    db.listProjectClipMemberships(userId),
   ]);
-  const countByCollection = new Map(
-    counts.map(row => [row.collectionId, row.clipCount])
+  const projectIdsByClip = new Map<number, number[]>();
+  for (const membership of memberships) {
+    const list = projectIdsByClip.get(membership.clipId) ?? [];
+    list.push(membership.projectId);
+    projectIdsByClip.set(membership.clipId, list);
+  }
+  return clips.map(clip =>
+    toFootageClip(clip, projectIdsByClip.get(clip.id) ?? [])
   );
-  return rows.map(row => ({
-    ...row,
-    clipCount: countByCollection.get(row.id) ?? 0,
-  }));
 }
 
 async function modelId(preferred: string, fallback: string) {
@@ -185,7 +190,7 @@ async function modelId(preferred: string, fallback: string) {
 async function clipsFor(userId?: number | null): Promise<FootageClip[]> {
   if (!userId) return DEMO_CLIPS;
   const saved = await db.listClipsForUser(userId);
-  return saved.length ? saved.map(toFootageClip) : DEMO_CLIPS;
+  return saved.length ? saved.map(clip => toFootageClip(clip)) : DEMO_CLIPS;
 }
 
 function parseFrameAnalysisMetadata(raw: string): ClipMetadataV2 {
@@ -307,8 +312,9 @@ export const appRouter = router({
           .optional()
       )
       .query(async ({ ctx, input }) => ({
-        clips: (await db.listClipsForUser(ctx.user.id, input?.projectId)).map(
-          toFootageClip
+        clips: await personalClipsWithMembership(
+          ctx.user.id,
+          input?.projectId
         ),
         mode: "personal" as const,
       })),
@@ -320,9 +326,10 @@ export const appRouter = router({
         })
       )
       .query(async ({ ctx, input }) => {
-        const source = (
-          await db.listClipsForUser(ctx.user.id, input.projectId)
-        ).map(toFootageClip);
+        const source = await personalClipsWithMembership(
+          ctx.user.id,
+          input.projectId
+        );
         const ranked = rankFootage(source, input.query);
         return {
           clips: ranked.map(item => item.clip),
@@ -355,9 +362,10 @@ export const appRouter = router({
         })
       )
       .query(async ({ ctx, input }) => {
-        const source = (
-          await db.listClipsForUser(ctx.user.id, input.projectId)
-        ).map(toFootageClip);
+        const source = await personalClipsWithMembership(
+          ctx.user.id,
+          input.projectId
+        );
         return {
           clips: rankSimilar(source, input.clipId, input.dimension).map(
             item => item.clip
@@ -494,15 +502,35 @@ export const appRouter = router({
           });
         return { success };
       }),
-    moveToProject: protectedProcedure
+    addToProject: protectedProcedure
       .input(
         z.object({
           clipId: z.number().int().positive(),
-          projectId: z.number().int().positive().nullable(),
+          projectId: z.number().int().positive(),
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const success = await db.moveClipToEditingProject({
+        const success = await db.addClipToProject({
+          userId: ctx.user.id,
+          ...input,
+        });
+        if (!success)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message:
+              "This clip or editing project is not available in your workspace.",
+          });
+        return { success };
+      }),
+    removeFromProject: protectedProcedure
+      .input(
+        z.object({
+          clipId: z.number().int().positive(),
+          projectId: z.number().int().positive(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.removeClipFromProject({
           userId: ctx.user.id,
           ...input,
         });
@@ -571,21 +599,42 @@ export const appRouter = router({
       }),
   }),
   projects: router({
+    sampleList: publicProcedure.query(() => ({
+      projects: demoProjects,
+      mode: "sample" as const,
+    })),
     list: protectedProcedure.query(async ({ ctx }) => {
-      const [projects, allClips] = await Promise.all([
+      const [projects, memberships, allClips] = await Promise.all([
         db.listEditingProjectsForUser(ctx.user.id),
+        db.listProjectClipMemberships(ctx.user.id),
         db.listClipsForUser(ctx.user.id),
       ]);
+      const countByProject = new Map<number, number>();
+      const assignedClipIds = new Set<number>();
+      for (const membership of memberships) {
+        assignedClipIds.add(membership.clipId);
+        countByProject.set(
+          membership.projectId,
+          (countByProject.get(membership.projectId) ?? 0) + 1
+        );
+      }
       return {
         projects: projects.map(project => ({
           ...project,
-          clipCount: allClips.filter(clip => clip.projectId === project.id)
-            .length,
+          clipCount: countByProject.get(project.id) ?? 0,
         })),
-        unassignedCount: allClips.filter(clip => clip.projectId === null)
-          .length,
+        unassignedCount: allClips.filter(
+          clip => !assignedClipIds.has(clip.id)
+        ).length,
       };
     }),
+    suggestions: protectedProcedure.query(async ({ ctx }) => ({
+      projects: buildProjectSuggestions(
+        (await db.listClipsForUser(ctx.user.id)).map(clip =>
+          toFootageClip(clip)
+        )
+      ),
+    })),
     create: protectedProcedure
       .input(
         z.object({
@@ -605,73 +654,6 @@ export const appRouter = router({
             message: "Could not create editing project.",
           });
         return project;
-      }),
-  }),
-  collections: router({
-    sampleList: publicProcedure.query(() => ({
-      collections: demoCollections,
-      mode: "sample" as const,
-    })),
-    personalList: protectedProcedure.query(async ({ ctx }) => {
-      const collections = await collectionsWithCounts(ctx.user.id);
-      return { collections, mode: "personal" as const };
-    }),
-    personalSuggestions: protectedProcedure.query(async ({ ctx }) => ({
-      collections: buildCollectionSuggestions(
-        (await db.listClipsForUser(ctx.user.id)).map(toFootageClip)
-      ),
-      mode: "personal" as const,
-    })),
-    list: publicProcedure.query(async ({ ctx }) => {
-      if (!ctx.user)
-        return { collections: demoCollections, mode: "sample" as const };
-      const collections = await collectionsWithCounts(ctx.user.id);
-      return collections.length
-        ? { collections, mode: "personal" as const }
-        : { collections: demoCollections, mode: "sample" as const };
-    }),
-    suggestions: publicProcedure.query(async ({ ctx }) => ({
-      collections: buildCollectionSuggestions(await clipsFor(ctx.user?.id)),
-    })),
-    create: protectedProcedure
-      .input(
-        z.object({
-          name: z.string().trim().min(1).max(120),
-          description: z.string().trim().max(500).optional(),
-          accent: z.string().trim().max(30).optional(),
-        })
-      )
-      .mutation(async ({ ctx, input }) => {
-        const collection = await db.createCollection({
-          ...input,
-          userId: ctx.user.id,
-        });
-        if (!collection)
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Could not create collection.",
-          });
-        return collection;
-      }),
-    addClip: protectedProcedure
-      .input(
-        z.object({
-          collectionId: z.number().int().positive(),
-          clipId: z.number().int().positive(),
-        })
-      )
-      .mutation(async ({ ctx, input }) => {
-        const success = await db.addClipToCollection({
-          ...input,
-          userId: ctx.user.id,
-        });
-        if (!success)
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message:
-              "This collection or clip is not available in your workspace.",
-          });
-        return { success };
       }),
   }),
 });

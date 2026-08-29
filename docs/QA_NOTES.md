@@ -55,3 +55,16 @@ The post-upload route was visually checked with the `uploaded=1` state. My Libra
 | `/my-library`, `/sample`, `/collections`, 375 px | Pass | The project rail, sample cards, sample collection list, private collection desk, preview/removal controls, and scrollable compact navigation remain available without overlap. |
 
 The CLI `organize` flow was smoke-tested in a temporary folder. It indexed a local video placeholder, printed the proposed source and destination, copied only after the explicit confirmation flag, preserved the relative destination path, and left the source file byte-identical and in place.
+
+## Projects-Collections Merge Update
+
+**Validated:** 2026-08-29
+
+Collections and editing projects were merged into a single Projects model, so the earlier `/collections` route no longer exists and the sections above that reference it are historical.
+
+| Surface | Result | Notes |
+| --- | --- | --- |
+| `/my-library`, desktop | Pending re-check | The private Workspace now renders an editing-project rail, a one-click create form, a **Suggested projects** section (one-tap Make), loose-clip view, project-scoped upload action, and an original-media preview panel with play and scrub controls. |
+| `/my-library`, 375 px | Pending re-check | Project rail, suggested groups, filter pills, single-column cards, the focused-clip note (now a Projects check-list), and the sticky selection action bar should stack without overlap. |
+
+Behavior changes since the sections above were written: selection-to-collection became **Create project from selection** and **Add to project** on the selection action bar; the focused-clip note now toggles clip membership across projects (many-to-many) instead of a single-move selector; the Sample Playground no longer shows sample collections and instead shows read-only sample project groupings. A manual desktop + 375 px re-check is still open for both `/my-library` states.

@@ -55,12 +55,15 @@ describe("footage router", () => {
     expect(result.clips.map(clip => clip.id)).toContain(104);
   });
 
-  it("derives thematic collection suggestions from available clips", async () => {
+  it("shows stable read-only sample project groupings", async () => {
     const caller = appRouter.createCaller(createPublicContext());
-    const result = await caller.collections.suggestions();
+    const result = await caller.projects.sampleList();
 
-    expect(result.collections.some(collection => collection.name === "Night stories")).toBe(true);
-    expect(result.collections.every(collection => collection.clipCount >= 2)).toBe(true);
+    expect(result.mode).toBe("sample");
+    expect(
+      result.projects.some(project => project.name === "Tokyo after dark")
+    ).toBe(true);
+    expect(result.projects.every(project => project.clipCount >= 2)).toBe(true);
   });
 
   it("returns a helpful error when creative guidance has no selected clip context", async () => {
@@ -71,13 +74,16 @@ describe("footage router", () => {
     });
   });
 
-  it("keeps workspace-changing collection procedures protected", async () => {
+  it("keeps workspace-changing project procedures protected", async () => {
     const caller = appRouter.createCaller(createPublicContext());
 
-    await expect(caller.collections.create({ name: "Night out" })).rejects.toMatchObject({
+    await expect(caller.projects.create({ name: "Night out" })).rejects.toMatchObject({
       code: "UNAUTHORIZED",
     });
-    await expect(caller.collections.addClip({ collectionId: 1, clipId: 101 })).rejects.toMatchObject({
+    await expect(caller.footage.addToProject({ projectId: 1, clipId: 101 })).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    await expect(caller.footage.removeFromProject({ projectId: 1, clipId: 101 })).rejects.toMatchObject({
       code: "UNAUTHORIZED",
     });
   });

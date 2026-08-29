@@ -40,6 +40,7 @@ export const editingProjects = mysqlTable(
     name: varchar("name", { length: 120 }).notNull(),
     description: text("description"),
     accent: varchar("accent", { length: 30 }).notNull().default("peach"),
+    isAiSuggested: boolean("isAiSuggested").notNull().default(false),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
@@ -58,9 +59,6 @@ export const clips = mysqlTable(
     userId: int("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    projectId: int("projectId").references(() => editingProjects.id, {
-      onDelete: "set null",
-    }),
     clipKey: varchar("clipKey", { length: 32 }).notNull().unique(),
     fileName: varchar("fileName", { length: 255 }).notNull(),
     mimeType: varchar("mimeType", { length: 100 }).notNull(),
@@ -95,48 +93,28 @@ export const clips = mysqlTable(
   table => [
     index("clips_user_created_idx").on(table.userId, table.createdAt),
     index("clips_user_status_idx").on(table.userId, table.status),
-    index("clips_project_created_idx").on(table.projectId, table.createdAt),
   ]
 );
 
-export const collections = mysqlTable(
-  "collections",
+export const projectClips = mysqlTable(
+  "projectClips",
   {
-    id: int("id").autoincrement().primaryKey(),
-    userId: int("userId")
+    projectId: int("projectId")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 120 }).notNull(),
-    description: text("description"),
-    accent: varchar("accent", { length: 30 }).notNull().default("violet"),
-    isAiSuggested: boolean("isAiSuggested").notNull().default(false),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  },
-  table => [
-    index("collections_user_created_idx").on(table.userId, table.createdAt),
-  ]
-);
-
-export const collectionClips = mysqlTable(
-  "collectionClips",
-  {
-    collectionId: int("collectionId")
-      .notNull()
-      .references(() => collections.id, { onDelete: "cascade" }),
+      .references(() => editingProjects.id, { onDelete: "cascade" }),
     clipId: int("clipId")
       .notNull()
       .references(() => clips.id, { onDelete: "cascade" }),
     addedAt: timestamp("addedAt").defaultNow().notNull(),
   },
   table => [
-    primaryKey({ columns: [table.collectionId, table.clipId] }),
-    index("collection_clips_clip_idx").on(table.clipId),
+    primaryKey({ columns: [table.projectId, table.clipId] }),
+    index("project_clips_clip_idx").on(table.clipId),
   ]
 );
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Clip = typeof clips.$inferSelect;
-export type Collection = typeof collections.$inferSelect;
 export type EditingProject = typeof editingProjects.$inferSelect;
+export type ProjectClip = typeof projectClips.$inferSelect;

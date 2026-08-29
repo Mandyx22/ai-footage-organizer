@@ -29,6 +29,13 @@
       "when": 1787428170413,
       "tag": "0003_huge_miracleman",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1788000000000,
+      "tag": "0004_merge_projects_and_collections",
+      "breakpoints": true
     }
   ]
 }

@@ -16,7 +16,7 @@ CapCut, Premiere, and Descript all extend into organization or AI assistance. Th
 
 > **Semantic, creator-controlled retrieval for messy personal footage at the point before a story is known.**
 
-The MVP should protect this difference. It should prioritize metadata quality, explainable search, visual similarity, collections, and grounded creative prompts over a timeline, automatic editing, template feeds, or platform integrations.
+The MVP should protect this difference. It should prioritize metadata quality, explainable search, visual similarity, editing projects, and grounded creative prompts over a timeline, automatic editing, template feeds, or platform integrations.
 
 ## References
 

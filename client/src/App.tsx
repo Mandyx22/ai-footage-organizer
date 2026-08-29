@@ -6,7 +6,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { FootageSelectionProvider } from "./contexts/FootageSelectionContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AskFootage from "./pages/AskFootage";
-import Collections from "./pages/Collections";
 import Documentation from "./pages/Documentation";
 import Home from "./pages/Home";
 import Library from "./pages/Library";
@@ -19,7 +18,6 @@ function Router() {
       <Route path="/my-library" component={MyLibrary} />
       <Route path="/sample" component={Library} />
       <Route path="/library" component={Library} />
-      <Route path="/collections" component={Collections} />
       <Route path="/ask" component={AskFootage} />
       <Route path="/docs" component={Documentation} />
       <Route path="/404" component={NotFound} />

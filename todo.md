@@ -261,18 +261,20 @@ Completion criteria:
 
 - [ ] Find Similar returns footage that is meaningfully related, not only clips with identical metadata fields.
 
-### Milestone 7 - Collections
+### Milestone 7 - Collections / Editing Projects merge
 
-- [ ] Create collections.
-- [ ] Add clips.
-- [ ] Open collection.
-- [ ] Browse collection clips.
-- [ ] Remove clips.
-- [ ] Preserve collection state after refresh.
+Collections were merged into the existing Projects model during Phase 2-A so there is a single grouping concept.
+
+- [x] Merge `collections` and `collectionClips` into `editingProjects` and a `projectClips` membership table.
+- [x] Replace single-move clip assignment with many-to-many clip membership (`addToProject` / `removeFromProject`).
+- [x] Derive thematic project suggestions (`buildProjectSuggestions`) instead of collection suggestions.
+- [x] Create projects from a selection, add a selection to an existing project, and toggle membership from the focused-clip note.
+- [x] Remove the `/collections` route and Collections page; surface suggestions in the My Library side rail.
+- [x] Backfill existing collection data into projects and apply the merge migration.
 
 Completion criteria:
 
-- [ ] The collection workflow is complete and persistent.
+- [x] The grouping workflow is complete, persistent, and described only in terms of editing projects.
 
 ### Milestone 8 - Ask / Inspire as RAG
 

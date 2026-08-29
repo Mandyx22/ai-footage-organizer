@@ -446,7 +446,7 @@ describe("footage retrieval", () => {
         observed: {
           ...metadataV2().observed,
           environmentType: "spaceship" as EnvironmentType,
-          socialContext: "best friends" as SocialContext,
+          socialContext: "unlisted" as SocialContext,
           activityLevel: "frantic" as ActivityLevel,
           visualDensity: "too much" as VisualDensity,
         },

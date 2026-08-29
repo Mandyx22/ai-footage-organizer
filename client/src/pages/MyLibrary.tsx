@@ -58,6 +58,19 @@ type SimilarDimension =
   | "composition"
   | "motion";
 type ActiveProject = number | null | undefined;
+type ProjectSummary = {
+  id: number;
+  name: string;
+  accent?: string;
+  clipCount: number;
+};
+type ProjectSuggestion = {
+  id: string;
+  name: string;
+  description: string;
+  accent: string;
+  clipCount: number;
+};
 
 export default function MyLibrary() {
   const { hasWorkspaceIdentity, loading, isPrototype } = useAuth();
@@ -72,12 +85,11 @@ export default function MyLibrary() {
     useState<ActiveProject>(undefined);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [createCollectionOpen, setCreateCollectionOpen] = useState(false);
-  const [addCollectionOpen, setAddCollectionOpen] = useState(false);
-  const [collectionName, setCollectionName] = useState("");
-  const [targetCollectionId, setTargetCollectionId] = useState("");
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projectName, setProjectName] = useState("");
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
+  const [addProjectOpen, setAddProjectOpen] = useState(false);
+  const [targetProjectId, setTargetProjectId] = useState("");
   const { selectedIds, toggleSelection, clearSelection, isSelected } =
     useFootageSelection();
   const projectInput = useMemo(
@@ -105,6 +117,9 @@ export default function MyLibrary() {
   const projects = trpc.projects.list.useQuery(undefined, {
     enabled: hasWorkspaceIdentity,
   });
+  const suggestions = trpc.projects.suggestions.useQuery(undefined, {
+    enabled: hasWorkspaceIdentity,
+  });
   const library = trpc.footage.personalList.useQuery(projectInput, {
     enabled: hasWorkspaceIdentity,
   });
@@ -114,43 +129,31 @@ export default function MyLibrary() {
   const similar = trpc.footage.personalSimilar.useQuery(similarInput, {
     enabled: hasWorkspaceIdentity && Boolean(focusedClipId && showSimilar),
   });
-  const collectionData = trpc.collections.personalList.useQuery(undefined, {
-    enabled: hasWorkspaceIdentity,
-  });
+  const refreshProjectList = () =>
+    Promise.all([
+      utils.footage.personalList.invalidate(),
+      utils.footage.personalSearch.invalidate(),
+      utils.footage.personalSimilar.invalidate(),
+      utils.projects.list.invalidate(),
+    ]);
   const createProject = trpc.projects.create.useMutation({
-    onSuccess: async project => {
-      await utils.projects.list.invalidate();
-      setActiveProjectId(project.id);
-      setProjectName("");
-      setShowProjectForm(false);
-      toast.success(`${project.name} is ready for its clips.`);
-    },
-  });
-  const moveClip = trpc.footage.moveToProject.useMutation({
     onSuccess: async () => {
-      await Promise.all([
-        utils.footage.personalList.invalidate(),
-        utils.footage.personalSearch.invalidate(),
-        utils.footage.personalSimilar.invalidate(),
-        utils.projects.list.invalidate(),
-      ]);
-      toast.success("Clip moved to its editing project.");
+      await utils.projects.list.invalidate();
     },
   });
-  const createCollection = trpc.collections.create.useMutation();
-  const addClipToCollection = trpc.collections.addClip.useMutation();
+  const addToProject = trpc.footage.addToProject.useMutation({
+    onSuccess: refreshProjectList,
+  });
+  const removeFromProject = trpc.footage.removeFromProject.useMutation({
+    onSuccess: refreshProjectList,
+  });
   const deleteClip = trpc.footage.delete.useMutation({
     onSuccess: async (_result, input) => {
       if (focusedClipId === input.clipId) {
         setFocusedClipId(null);
         setDetailOpen(false);
       }
-      await Promise.all([
-        utils.footage.personalList.invalidate(),
-        utils.footage.personalSearch.invalidate(),
-        utils.footage.personalSimilar.invalidate(),
-        utils.projects.list.invalidate(),
-      ]);
+      await refreshProjectList();
       toast.success("Clip removed from your workspace.");
     },
   });
@@ -190,70 +193,95 @@ export default function MyLibrary() {
     baseClips.some(clip => clip.id === id)
   );
   const activeSelectionCount = selectedClipIds.length;
-  const collections = collectionData.data?.collections ?? [];
   const selectedProjectForUpload =
     activeProjectId === undefined ? null : activeProjectId;
-  const refreshProjectList = () =>
-    Promise.all([
-      utils.footage.personalList.invalidate(),
-      utils.footage.personalSearch.invalidate(),
-      utils.footage.personalSimilar.invalidate(),
-      utils.projects.list.invalidate(),
-    ]);
-  const persistSelectedClipsToCollection = async (collectionId: number) => {
-    if (!selectedClipIds.length) return;
-    await Promise.all(
-      selectedClipIds.map(clipId =>
-        addClipToCollection.mutateAsync({ collectionId, clipId })
-      )
-    );
-    await Promise.all([
-      utils.collections.personalList.invalidate(),
-      utils.collections.personalSuggestions.invalidate(),
-    ]);
-  };
-  const createCollectionFromSelection = async () => {
-    if (!collectionName.trim()) {
-      toast.error("Give this collection a name first.");
-      return;
-    }
+  const mutationPending =
+    createProject.isPending || addToProject.isPending || removeFromProject.isPending;
+
+  const submitProjectForm = async () => {
+    if (!projectName.trim()) return;
     try {
-      const collection = await createCollection.mutateAsync({
-        name: collectionName.trim(),
-        description: selectedClipIds.length
-          ? `${selectedClipIds.length} selected personal clips from Framefind.`
+      const project = await createProject.mutateAsync({
+        name: projectName.trim(),
+      });
+      setActiveProjectId(project.id);
+      setProjectName("");
+      setShowProjectForm(false);
+      toast.success(`${project.name} is ready for its clips.`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not create that project."
+      );
+    }
+  };
+
+  const createProjectFromSelection = async (name: string) => {
+    try {
+      const project = await createProject.mutateAsync({
+        name: name.trim(),
+        description: activeSelectionCount
+          ? `${activeSelectionCount} selected clips grouped from your Workspace.`
           : undefined,
         accent: "apricot",
       });
-      await persistSelectedClipsToCollection(collection.id);
-      setCollectionName("");
-      setCreateCollectionOpen(false);
+      if (selectedClipIds.length) {
+        await Promise.all(
+          selectedClipIds.map(clipId =>
+            addToProject.mutateAsync({ projectId: project.id, clipId })
+          )
+        );
+      }
+      setProjectName("");
+      setCreateProjectOpen(false);
       toast.success(
-        `${selectedClipIds.length} clips are now in ${collection.name}.`
+        selectedClipIds.length
+          ? `${selectedClipIds.length} clips are now in ${project.name}.`
+          : `${project.name} is ready for material.`
       );
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Could not make that collection."
+          : "Could not make that project."
       );
     }
   };
-  const addSelectedToExistingCollection = async () => {
-    const collectionId = Number(targetCollectionId);
-    if (!Number.isInteger(collectionId)) {
-      toast.error("Choose a collection first.");
+
+  const addSelectedToExistingProject = async () => {
+    const projectId = Number(targetProjectId);
+    if (!Number.isInteger(projectId)) {
+      toast.error("Choose a project first.");
       return;
     }
     try {
-      await persistSelectedClipsToCollection(collectionId);
-      setAddCollectionOpen(false);
-      toast.success(`${selectedClipIds.length} clips added to collection.`);
+      await Promise.all(
+        selectedClipIds.map(clipId =>
+          addToProject.mutateAsync({ projectId, clipId })
+        )
+      );
+      setAddProjectOpen(false);
+      toast.success(`${selectedClipIds.length} clips added to that project.`);
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Could not add those clips to the collection."
+          : "Could not add those clips to the project."
+      );
+    }
+  };
+
+  const createSuggestionProject = async (suggestion: ProjectSuggestion) => {
+    try {
+      const project = await createProject.mutateAsync({
+        name: suggestion.name,
+        description: suggestion.description,
+        accent: suggestion.accent,
+      });
+      setActiveProjectId(project.id);
+      toast.success(`${project.name} is ready to fill.`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not make that project."
       );
     }
   };
@@ -295,8 +323,7 @@ export default function MyLibrary() {
                   <form
                     onSubmit={event => {
                       event.preventDefault();
-                      if (projectName.trim())
-                        createProject.mutate({ name: projectName.trim() });
+                      submitProjectForm();
                     }}
                     className="mb-3 rounded-xl border border-[#2c2922]/30 bg-[#fff1ba] p-2"
                   >
@@ -347,6 +374,37 @@ export default function MyLibrary() {
                     />
                   ))}
                 </div>
+                {(suggestions.data?.projects ?? []).length > 0 && (
+                  <div className="mt-5">
+                    <p className="mb-2 px-1 font-mono text-[9px] uppercase tracking-[.16em] ink-muted">
+                      Suggested projects
+                    </p>
+                    <div className="space-y-1.5">
+                      {(suggestions.data?.projects ?? []).map(suggestion => (
+                        <div
+                          key={suggestion.id}
+                          className="flex items-center gap-2 rounded-xl border border-dashed border-[#2c2922]/45 bg-[#fff1ba]/55 px-2 py-2"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold">
+                              {suggestion.name}
+                            </p>
+                            <p className="text-[10px] ink-muted">
+                              {suggestion.clipCount} clips fit this thread
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => createSuggestionProject(suggestion)}
+                            disabled={createProject.isPending}
+                            className="rounded-md border border-[#2c2922] bg-[#fffdf7] px-2 py-1 text-[10px] font-bold shadow-sm hover:bg-white/80 disabled:opacity-50"
+                          >
+                            Make
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="mt-5 rounded-xl border border-[#2c2922]/25 bg-[#e8eff7] p-3 text-[11px] leading-5 ink-muted">
                   <b className="text-[#2c2922]">
                     {isPrototype
@@ -535,16 +593,16 @@ export default function MyLibrary() {
                   )}
                 <SelectionActionBar
                   selectedCount={activeSelectionCount}
-                  hasCollections={collections.length > 0}
-                  creating={
-                    createCollection.isPending || addClipToCollection.isPending
-                  }
-                  adding={addClipToCollection.isPending}
-                  onCreateCollection={() => setCreateCollectionOpen(true)}
-                  onAddToCollection={() => {
-                    setTargetCollectionId(String(collections[0]?.id ?? ""));
-                    setAddCollectionOpen(true);
+                  pending={mutationPending}
+                  adding={addToProject.isPending}
+                  onCreateProject={() => setCreateProjectOpen(true)}
+                  onAddToProject={() => {
+                    setTargetProjectId(
+                      String(projects.data?.projects[0]?.id ?? "")
+                    );
+                    setAddProjectOpen(true);
                   }}
+                  hasProjects={(projects.data?.projects?.length ?? 0) > 0}
                   onClear={clearSelection}
                 />
               </div>
@@ -557,15 +615,18 @@ export default function MyLibrary() {
         open={detailOpen && Boolean(focusedClip)}
         selected={focusedClip ? isSelected(focusedClip.id) : false}
         projects={projects.data?.projects ?? []}
-        deletePending={deleteClip.isPending}
+        deletePending={deleteClip.isPending || mutationPending}
         onOpenChange={setDetailOpen}
         onToggle={() => focusedClip && toggleSelection(focusedClip.id)}
         onFindSimilar={() => {
           setShowSimilar(true);
           setDetailOpen(false);
         }}
-        onMove={projectId =>
-          focusedClip && moveClip.mutate({ clipId: focusedClip.id, projectId })
+        onToggleProject={(projectId, keep) =>
+          focusedClip &&
+          (keep
+            ? addToProject.mutate({ clipId: focusedClip.id, projectId })
+            : removeFromProject.mutate({ clipId: focusedClip.id, projectId }))
         }
         onDelete={() => {
           if (
@@ -577,85 +638,79 @@ export default function MyLibrary() {
             deleteClip.mutate({ clipId: focusedClip.id });
         }}
       />
-      <Dialog
-        open={createCollectionOpen}
-        onOpenChange={setCreateCollectionOpen}
-      >
+      <Dialog open={createProjectOpen} onOpenChange={setCreateProjectOpen}>
         <DialogContent className="border-[1.5px] border-[#2c2922] bg-[#fffdf7] text-[#2c2922] shadow-[4px_4px_0_#2c2922] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-hand text-3xl font-bold">
-              Make a collection
+              Make a project
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-xs leading-5 ink-muted">
-              Save {activeSelectionCount} selected clips as a persistent group.
+              Save {activeSelectionCount} selected clips as an editing project,
+              or create an empty one.
             </p>
             <input
               autoFocus
-              value={collectionName}
-              onChange={event => setCollectionName(event.target.value)}
+              value={projectName}
+              onChange={event => setProjectName(event.target.value)}
               onKeyDown={event =>
-                event.key === "Enter" && createCollectionFromSelection()
+                event.key === "Enter" && createProjectFromSelection(projectName)
               }
               placeholder="e.g. Quiet summer memory"
               className="h-10 w-full rounded-lg border-[1.5px] border-[#2c2922]/55 bg-[#fffdf7] px-3 text-sm outline-none focus:ring-2 focus:ring-[#e69275]"
             />
             <Button
-              onClick={createCollectionFromSelection}
+              onClick={() => createProjectFromSelection(projectName)}
               disabled={
-                !activeSelectionCount ||
-                !collectionName.trim() ||
-                createCollection.isPending ||
-                addClipToCollection.isPending
+                !projectName.trim() || createProject.isPending
               }
               className="w-full rounded-xl border-[1.5px] border-[#2c2922] bg-[#f4ad89] text-xs font-bold text-[#2c2922] shadow-[2px_2px_0_#2c2922] hover:bg-[#fac7ae]"
             >
-              {(createCollection.isPending ||
-                addClipToCollection.isPending) && (
+              {createProject.isPending && (
                 <Loader2 className="mr-2 size-4 animate-spin" />
               )}
-              Create collection
+              Create project
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-      <Dialog open={addCollectionOpen} onOpenChange={setAddCollectionOpen}>
+      <Dialog open={addProjectOpen} onOpenChange={setAddProjectOpen}>
         <DialogContent className="border-[1.5px] border-[#2c2922] bg-[#fffdf7] text-[#2c2922] shadow-[4px_4px_0_#2c2922] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-hand text-3xl font-bold">
-              Add to collection
+              Add to project
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-xs leading-5 ink-muted">
-              Add {activeSelectionCount} selected clips to an existing saved
-              group.
+              Put {activeSelectionCount} selected clips into an existing
+              editing project.
             </p>
             <select
-              value={targetCollectionId}
-              onChange={event => setTargetCollectionId(event.target.value)}
+              value={targetProjectId}
+              onChange={event => setTargetProjectId(event.target.value)}
               className="h-10 w-full rounded-lg border-[1.5px] border-[#2c2922]/55 bg-[#fffdf7] px-3 text-sm outline-none focus:ring-2 focus:ring-[#e69275]"
             >
-              {collections.map(collection => (
-                <option key={collection.id} value={collection.id}>
-                  {collection.name}
+              {(projects.data?.projects ?? []).map(project => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
                 </option>
               ))}
             </select>
             <Button
-              onClick={addSelectedToExistingCollection}
+              onClick={addSelectedToExistingProject}
               disabled={
                 !activeSelectionCount ||
-                !targetCollectionId ||
-                addClipToCollection.isPending
+                !targetProjectId ||
+                addToProject.isPending
               }
               className="w-full rounded-xl border-[1.5px] border-[#2c2922] bg-[#f4ad89] text-xs font-bold text-[#2c2922] shadow-[2px_2px_0_#2c2922] hover:bg-[#fac7ae]"
             >
-              {addClipToCollection.isPending && (
+              {addToProject.isPending && (
                 <Loader2 className="mr-2 size-4 animate-spin" />
               )}
-              Add to collection
+              Add to project
             </Button>
           </div>
         </DialogContent>
@@ -671,19 +726,19 @@ export default function MyLibrary() {
 
 function SelectionActionBar({
   selectedCount,
-  hasCollections,
-  creating,
+  pending,
   adding,
-  onCreateCollection,
-  onAddToCollection,
+  onCreateProject,
+  onAddToProject,
+  hasProjects,
   onClear,
 }: {
   selectedCount: number;
-  hasCollections: boolean;
-  creating: boolean;
+  pending: boolean;
   adding: boolean;
-  onCreateCollection: () => void;
-  onAddToCollection: () => void;
+  onCreateProject: () => void;
+  onAddToProject: () => void;
+  hasProjects: boolean;
   onClear: () => void;
 }) {
   if (selectedCount === 0) return null;
@@ -696,21 +751,21 @@ function SelectionActionBar({
         </span>
         <div className="flex flex-wrap gap-2">
           <Button
-            onClick={onCreateCollection}
-            disabled={creating}
+            onClick={onCreateProject}
+            disabled={pending}
             className="h-8 rounded-lg border border-[#2c2922] bg-[#f4ad89] px-2.5 text-[11px] font-bold text-[#2c2922] shadow-[1px_1px_0_#2c2922] hover:bg-[#fac7ae]"
           >
             <Plus className="mr-1.5 size-3.5" />
-            Create collection
+            Create project
           </Button>
-          {hasCollections && (
+          {hasProjects && (
             <Button
-              onClick={onAddToCollection}
+              onClick={onAddToProject}
               disabled={adding}
               className="h-8 rounded-lg border border-[#2c2922]/45 bg-[#fffdf7] px-2.5 text-[11px] font-bold text-[#2c2922] shadow-sm hover:bg-[#fff1ba]"
             >
               <FolderPlus className="mr-1.5 size-3.5" />
-              Add to collection
+              Add to project
             </Button>
           )}
           <Link
@@ -787,18 +842,18 @@ function ClipDetailDialog({
   onOpenChange,
   onToggle,
   onFindSimilar,
-  onMove,
+  onToggleProject,
   onDelete,
 }: {
   clip: Clip | null;
   open: boolean;
   selected: boolean;
-  projects: Array<{ id: number; name: string }>;
+  projects: ProjectSummary[];
   deletePending: boolean;
   onOpenChange: (open: boolean) => void;
   onToggle: () => void;
   onFindSimilar: () => void;
-  onMove: (projectId: number | null) => void;
+  onToggleProject: (projectId: number, keepInProject: boolean) => void;
   onDelete: () => void;
 }) {
   return (
@@ -860,25 +915,43 @@ function ClipDetailDialog({
                   <WandSparkles className="mr-1.5 inline size-3.5" />
                   Find similar in this view
                 </button>
-                <label className="rounded-lg border border-[#2c2922]/35 bg-[#fffdf7] px-3 py-2 text-xs">
-                  <span className="mr-2 font-semibold">Move to project</span>
-                  <select
-                    value={clip.projectId ?? ""}
-                    onChange={event =>
-                      onMove(
-                        event.target.value ? Number(event.target.value) : null
-                      )
-                    }
-                    className="mt-2 w-full bg-transparent text-xs outline-none sm:mt-0"
-                  >
-                    <option value="">Loose clips</option>
-                    {projects.map(project => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="rounded-lg border border-[#2c2922]/35 bg-[#fffdf7] px-3 py-2">
+                  <p className="text-xs font-semibold">Projects</p>
+                  {projects.length ? (
+                    <div className="mt-2 space-y-1.5">
+                      {projects.map(project => {
+                        const inProject = clip.projectIds.includes(project.id);
+                        return (
+                          <div
+                            key={project.id}
+                            className="flex items-center justify-between gap-2 rounded-md border border-[#2c2922]/25 px-2 py-1.5"
+                          >
+                            <span className="min-w-0 truncate text-xs">
+                              {project.name}
+                            </span>
+                            <button
+                              onClick={() =>
+                                onToggleProject(project.id, !inProject)
+                              }
+                              className={cn(
+                                "shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold transition-colors",
+                                inProject
+                                  ? "bg-[#dcefdc] text-[#2c2922]"
+                                  : "border border-[#2c2922]/30 bg-[#fffdf7] ink-muted hover:bg-[#fff1ba]"
+                              )}
+                            >
+                              {inProject ? "In this project" : "Add"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[11px] leading-5 ink-muted">
+                      Create a project first to give this clip a home.
+                    </p>
+                  )}
+                </div>
                 <button
                   onClick={onDelete}
                   disabled={deletePending}
