@@ -1,5 +1,3 @@
-import { COOKIE_NAME } from "@shared/const";
-
 export type Clip = {
   id: number;
   projectIds: number[];
@@ -57,19 +55,6 @@ export const demoImages: Record<number, string> = {
 export function hideBrokenImageElement(image: HTMLImageElement) {
   image.style.display = "none";
   image.setAttribute("aria-hidden", "true");
-}
-
-function sessionBearerHeaders() {
-  try {
-    const raw = sessionStorage.getItem("manus-cookie");
-    if (!raw) return {};
-    const prefix = `${COOKIE_NAME}=`;
-    const pair = raw.split(";").find(value => value.trim().startsWith(prefix));
-    const token = pair?.trim().slice(prefix.length);
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch {
-    return {};
-  }
 }
 
 export function formatDuration(durationMs: number) {
@@ -131,8 +116,6 @@ export function uploadOriginalVideo(clipId: number, file: File, onProgress: (val
     const request = new XMLHttpRequest();
     request.open("POST", `/api/footage/upload/${clipId}`);
     request.timeout = 120_000;
-    const authHeaders = sessionBearerHeaders();
-    if (authHeaders.Authorization) request.setRequestHeader("Authorization", authHeaders.Authorization);
     request.upload.onprogress = event => event.lengthComputable && onProgress(Math.round((event.loaded / event.total) * 100));
     request.onload = () => {
       if (request.status >= 200 && request.status < 300) { resolve(); return; }

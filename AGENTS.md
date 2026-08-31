@@ -58,19 +58,20 @@ here.
   prompt, `buildSearchDocument`, and `createAnalyzedClip` dual-write.
   Details in framefind-metadata.
 - CLI: bug fixes only. Do not add CLI features.
-- Auth architecture stays until `todo.md` says otherwise. MVP may use a
-  no-login prototype workspace; that is not permission to delete OAuth.
+- The app is a single-user local workspace. There is no OAuth/login/session
+  surface; every request resolves to the persisted prototype user, so app code
+  must not assume or reintroduce an auth layer.
 
 ## Stop and discuss first
 
 - Core data-model changes; DB / AI / storage provider swaps.
-- Deleting auth; introducing queues or embeddings.
+- Introducing queues or embeddings.
 - A diff larger than one bounded feature or about ten files.
 - Work that conflicts with uncommitted changes.
 
 ## Where things live (index only)
 
-- tRPC: `server/routers.ts` (`system`, `auth`, `footage`, `projects`).
+- tRPC: `server/routers.ts` (`system`, `footage`, `projects`).
   Frame-analysis prompt + strict schema live here.
 - Ranking / V2 types: `server/footage.ts` (tested).
 - Persistence: `server/db.ts`, `drizzle/schema.ts`.

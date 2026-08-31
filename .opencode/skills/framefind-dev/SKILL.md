@@ -33,15 +33,15 @@ If `pnpm` is unavailable in a given shell, run the local bins directly:
 | `client/src/pages/` | Routes: `Home`, `Library` (sample), `MyLibrary` (private), `AskFootage`, `Documentation`, `ComponentShowcase`, `NotFound`. |
 | `client/src/lib/` | Transport (`trpc.ts`, `footage.ts`), strict source view model (`librarySource.ts`), upload outcome (`uploadOutcome.ts`). Pure logic lives here so it is unit-testable. |
 | `client/src/contexts/` | `FootageSelectionContext`, `ThemeContext`. |
-| `client/src/components/` | UI primitives (see `components/ui/`) and feature components. `AIChatBox`, `DashboardLayout`, `UploadFootageDialog`, `VideoClipPreview`, `ManusDialog`. |
-| `server/_core/index.ts` | Express bootstrap: multipart `/api/footage/upload/:clipId`, tRPC middleware, Vite middleware / static, OAuth routes, storage proxy. |
-| `server/routers.ts` | tRPC `appRouter`: `footage`, `projects`, `auth`, `system`. Also the canonical frame-analysis system prompt + response schema. |
+| `client/src/components/` | UI primitives (see `components/ui/`) and feature components. `UploadFootageDialog`, `VideoClipPreview`, `SketchShell`. |
+| `server/_core/index.ts` | Express bootstrap: multipart `/api/footage/upload/:clipId`, tRPC middleware, Vite middleware / static, storage proxy. |
+| `server/routers.ts` | tRPC `appRouter`: `footage`, `projects`, `system`. Also the canonical frame-analysis system prompt + response schema. |
 | `server/footage.ts` | Metadata V2 types, `DEMO_CLIPS`, `buildSearchDocument`, `rankFootage`, `rankSimilar`, `buildProjectSuggestions`, `toFootageClip`. Pure, heavily tested. |
 | `server/db.ts` | Drizzle data access. All personal queries are scoped by `userId`. |
-| `server/_core/` | llm, qwenProvider, frameAnalysisProvider, storageProxy, oauth, env, cookies, etc. |
+| `server/_core/` | llm, qwenProvider, frameAnalysisProvider, storageProxy, context, env, trpc, etc. |
 | `server/storage.ts` | S3-compatible object storage helpers (`storagePut` returns `{ key, url: /manus-storage/... }`). |
 | `drizzle/schema.ts` | MySQL tables: `users`, `editingProjects`, `clips`, `projectClips` (membership). |
-| `shared/` | Shared client/server types and constants (`const.ts` has `COOKIE_NAME`, error messages). Import via `@shared`. |
+| `shared/` | Shared client/server types and constants (`const.ts` has error messages). Import via `@shared`. |
 | `cli/` | Local-first CLI (`framefind.mjs` + `framefind-core.mjs`). Feature development is frozen; fix bugs only. |
 | `todo.md` | Canonical roadmap + milestone state. Update it after each milestone. |
 | `docs/` | PRD, CLI guide, QA notes, competitor summary. Update QA_NOTES on visual changes. |

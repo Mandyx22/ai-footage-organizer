@@ -1,4 +1,3 @@
-import { useAuth } from "@/_core/hooks/useAuth";
 import { LibrarySourceStatus } from "@/components/LibrarySourceStatus";
 import { SketchShell } from "@/components/SketchShell";
 import { UploadFootageDialog } from "@/components/UploadFootageDialog";
@@ -73,7 +72,6 @@ type ProjectSuggestion = {
 };
 
 export default function MyLibrary() {
-  const { hasWorkspaceIdentity, loading, isPrototype } = useAuth();
   const utils = trpc.useUtils();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All clips");
@@ -114,20 +112,14 @@ export default function MyLibrary() {
     }),
     [focusedClipId, similarDimension, activeProjectId]
   );
-  const projects = trpc.projects.list.useQuery(undefined, {
-    enabled: hasWorkspaceIdentity,
-  });
-  const suggestions = trpc.projects.suggestions.useQuery(undefined, {
-    enabled: hasWorkspaceIdentity,
-  });
-  const library = trpc.footage.personalList.useQuery(projectInput, {
-    enabled: hasWorkspaceIdentity,
-  });
+  const projects = trpc.projects.list.useQuery(undefined);
+  const suggestions = trpc.projects.suggestions.useQuery(undefined);
+  const library = trpc.footage.personalList.useQuery(projectInput);
   const searched = trpc.footage.personalSearch.useQuery(searchInput, {
-    enabled: hasWorkspaceIdentity && searchQuery.trim().length > 1,
+    enabled: searchQuery.trim().length > 1,
   });
   const similar = trpc.footage.personalSimilar.useQuery(similarInput, {
-    enabled: hasWorkspaceIdentity && Boolean(focusedClipId && showSimilar),
+    enabled: Boolean(focusedClipId && showSimilar),
   });
   const refreshProjectList = () =>
     Promise.all([
@@ -290,23 +282,7 @@ export default function MyLibrary() {
     <>
       <SketchShell active="myLibrary" onUpload={() => setUploadOpen(true)}>
         <div className="mx-auto max-w-[1560px] px-4 pb-12 pt-8 sm:px-7 lg:px-10">
-          {!loading && !hasWorkspaceIdentity ? (
-            <section className="paper-panel mx-auto max-w-2xl rounded-2xl p-8 text-center">
-              <Archive className="mx-auto size-7 text-[#bd7058]" />
-              <p className="mt-5 font-mono text-[10px] uppercase tracking-[.18em] ink-muted">
-                Workspace unavailable
-              </p>
-              <h1 className="mt-2 font-hand text-5xl font-bold leading-[.88]">
-                Your footage needs
-                <br />a <span className="scribble">workspace.</span>
-              </h1>
-              <p className="mx-auto mt-4 max-w-md text-sm leading-6 ink-muted">
-                The prototype workspace could not be loaded. Check the database
-                connection and try again.
-              </p>
-            </section>
-          ) : (
-            <section className="grid gap-6 xl:grid-cols-[230px_minmax(0,1fr)]">
+          <section className="grid gap-6 xl:grid-cols-[230px_minmax(0,1fr)]">
               <aside className="paper-panel h-fit rounded-2xl p-3 xl:sticky xl:top-5">
                 <div className="mb-3 flex items-center justify-between">
                   <p className="font-mono text-[10px] uppercase tracking-[.16em] ink-muted">
@@ -406,14 +382,9 @@ export default function MyLibrary() {
                   </div>
                 )}
                 <div className="mt-5 rounded-xl border border-[#2c2922]/25 bg-[#e8eff7] p-3 text-[11px] leading-5 ink-muted">
-                  <b className="text-[#2c2922]">
-                    {isPrototype
-                      ? "Prototype workspace."
-                      : "Projects are virtual folders."}
-                  </b>{" "}
-                  {isPrototype
-                    ? "No login is required in this local MVP; footage is saved to a shared prototype identity."
-                    : "They organize clips for a specific edit without moving the original files."}
+                  <b className="text-[#2c2922]">Local workspace.</b> No login is
+                  required in this single-user app; footage is saved straight to
+                  your local prototype identity.
                 </div>
               </aside>
               <div className={cn(activeSelectionCount > 0 && "pb-10")}>
@@ -607,7 +578,6 @@ export default function MyLibrary() {
                 />
               </div>
             </section>
-          )}
         </div>
       </SketchShell>
       <ClipDetailDialog

@@ -1,54 +1,40 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
 import { getOrCreatePrototypeUser } from "../db";
-import { sdk } from "./sdk";
 
-export type AuthContext =
-  | { kind: "authenticated"; isAuthenticated: true; hasWorkspaceIdentity: true }
-  | { kind: "prototype"; isAuthenticated: false; hasWorkspaceIdentity: true }
-  | { kind: "none"; isAuthenticated: false; hasWorkspaceIdentity: false };
+export type AuthContext = {
+  kind: "prototype";
+  isAuthenticated: false;
+  hasWorkspaceIdentity: true;
+};
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
-  user: User | null;
+  user: User;
   auth: AuthContext;
 };
 
+// Single-user local workspace: every request is bound to the one persisted
+// prototype user. There is no login, session, or authentication surface.
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
-  let user: User | null = null;
-  let auth: AuthContext = {
-    kind: "none",
-    isAuthenticated: false,
-    hasWorkspaceIdentity: false,
-  };
-
-  try {
-    user = await sdk.authenticateRequest(opts.req);
-    auth = {
-      kind: "authenticated",
-      isAuthenticated: true,
-      hasWorkspaceIdentity: true,
-    };
-  } catch (error) {
-    // Local/single-user MVP fallback: unauthenticated requests share one
-    // persisted prototype workspace. This is not anonymous-user isolation.
-    user = await getOrCreatePrototypeUser() ?? null;
-    if (user) {
-      auth = {
-        kind: "prototype",
-        isAuthenticated: false,
-        hasWorkspaceIdentity: true,
-      };
-    }
+  const user = (await getOrCreatePrototypeUser()) ?? null;
+  if (!user) {
+    throw new Error(
+      "Workspace user could not be resolved; check the database connection."
+    );
   }
 
   return {
     req: opts.req,
     res: opts.res,
     user,
-    auth,
+    auth: {
+      kind: "prototype",
+      isAuthenticated: false,
+      hasWorkspaceIdentity: true,
+    },
   };
 }

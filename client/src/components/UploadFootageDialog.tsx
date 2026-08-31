@@ -1,4 +1,3 @@
-import { useAuth } from "@/_core/hooks/useAuth";
 import { UploadResultSummary } from "@/components/UploadResultSummary";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +12,6 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 
 export function UploadFootageDialog({ open, onOpenChange, projectId = null }: { open: boolean; onOpenChange: (open: boolean) => void; projectId?: number | null }) {
-  const { hasWorkspaceIdentity } = useAuth();
   const [jobs, setJobs] = useState<UploadJob[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [libraryActionReady, setLibraryActionReady] = useState(false);
@@ -23,7 +21,6 @@ export function UploadFootageDialog({ open, onOpenChange, projectId = null }: { 
   const analyzeFrame = trpc.footage.analyzeFrame.useMutation();
   const deleteClip = trpc.footage.delete.useMutation();
   const processFiles = async (files: File[]) => {
-    if (!hasWorkspaceIdentity) { toast.info("The prototype workspace is unavailable right now."); return; }
     const videoFiles = files.filter(file => file.type.startsWith("video/"));
     if (!videoFiles.length) { toast.error("Please choose one or more video files."); return; }
     const queuedJobs = createUploadQueue(videoFiles);

@@ -117,23 +117,23 @@ Baseline notes:
 - Current stabilization branch: `improve-multiframe-analysis`.
 - Existing uncommitted product work before Milestone 0: browser multi-frame sampling and AI prompt updates.
 - Required for real web ingest: `DATABASE_URL`, `BUILT_IN_FORGE_API_URL`, and `BUILT_IN_FORGE_API_KEY`.
-- Still required by the existing auth system until Milestone 1 removes auth from the core MVP path: `VITE_APP_ID`, `JWT_SECRET`, `OAUTH_SERVER_URL`, and optionally `OWNER_OPEN_ID`.
+- Auth/Forge SDK dependencies were removed in Phase B. The app is a single-user local workspace with no login surface; every request resolves to the persisted prototype user.
 - Manus / Forge dependencies remain in place. Provider replacement is explicitly out of scope for Milestone 0.
 
-### Milestone 1 - No-login prototype workspace
+### Milestone 1 - No-login prototype workspace (DONE in Phase B)
 
-- [ ] Add the smallest default/local workspace strategy.
-- [ ] Keep the existing auth architecture in place.
-- [ ] Make upload / analyze / save / library usable without Manus OAuth login.
-- [ ] Keep the change scoped.
+- [x] Add the smallest default/local workspace strategy.
+- [x] Remove the auth architecture (OAuth, sessions, login/logout, admin, notifications).
+- [x] Make upload / analyze / save / library usable without Manus OAuth login.
+- [x] Keep the change scoped.
 
 Completion criteria:
 
-- [ ] In a new browser session, a user can enter My Library without login and begin uploading footage.
+- [x] In a new browser session, a user can enter My Library without login and begin uploading footage.
 
 Implementation note:
 
-- The no-login MVP uses one persisted prototype user in the existing `users` table as a local / single-user prototype workspace identity. This is not production anonymous-user isolation.
+- The single-user MVP uses one persisted prototype user in the existing `users` table as a local / single-user prototype workspace identity. This is not production anonymous-user isolation.
 
 ### Milestone 2 - One real video end-to-end
 

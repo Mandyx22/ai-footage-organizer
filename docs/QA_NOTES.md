@@ -68,3 +68,15 @@ Collections and editing projects were merged into a single Projects model, so th
 | `/my-library`, 375 px | Pending re-check | Project rail, suggested groups, filter pills, single-column cards, the focused-clip note (now a Projects check-list), and the sticky selection action bar should stack without overlap. |
 
 Behavior changes since the sections above were written: selection-to-collection became **Create project from selection** and **Add to project** on the selection action bar; the focused-clip note now toggles clip membership across projects (many-to-many) instead of a single-move selector; the Sample Playground no longer shows sample collections and instead shows read-only sample project groupings. A manual desktop + 375 px re-check is still open for both `/my-library` states.
+
+## Auth Removal Update (Phase B)
+
+**Validated:** 2026-08-31
+
+The app is now a single-user local workspace with no auth surface. OAuth routes, the JWT/session SDK, the login/logout UI, the `auth.me` endpoint, the admin procedure, owner notifications, and the `axios`/`jose`/`cookie` dependencies were removed. Every request `createContext` resolves to the persisted prototype user (`framefind-prototype-workspace`).
+
+| Surface | Result | Notes |
+| --- | --- | --- |
+| `/my-library`, desktop + mobile | Pending re-check | The header now shows a static `Local workspace` chip instead of Sign in / avatar; the sidebar workspace note reads "Local workspace. No login is required…". No workspace-unavailable gate remains. The "Workspace unavailable" empty-state section was deleted. |
+
+Notes: `protectedProcedure`/`publicProcedure` remain (`protected` just scopes to the workspace user and always passes). Legacy dead core modules that referenced the removed Forge env (`map`, `dataApi`, `heartbeat`, `voiceTranscription`, `imageGeneration`) were deleted. A full desktop + 375 px re-check of the header and My Library is still open.

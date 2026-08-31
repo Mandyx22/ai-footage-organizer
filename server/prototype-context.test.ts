@@ -1,14 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  authenticateRequest: vi.fn(),
   getOrCreatePrototypeUser: vi.fn(),
-}));
-
-vi.mock("./_core/sdk", () => ({
-  sdk: {
-    authenticateRequest: mocks.authenticateRequest,
-  },
 }));
 
 vi.mock("./db", () => ({
@@ -17,7 +10,7 @@ vi.mock("./db", () => ({
 
 import { createContext } from "./_core/context";
 
-function user(id: number, openId: string, loginMethod = "manus") {
+function user(id: number, openId: string, loginMethod = "prototype") {
   return {
     id,
     openId,
@@ -39,29 +32,13 @@ function contextOptions() {
   } as Parameters<typeof createContext>[0];
 }
 
-describe("prototype workspace context", () => {
+describe("single-user workspace context", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("uses the real authenticated user when Manus authentication succeeds", async () => {
-    const authenticated = user(9, "real-creator");
-    mocks.authenticateRequest.mockResolvedValue(authenticated);
-
-    const ctx = await createContext(contextOptions());
-
-    expect(ctx.user).toBe(authenticated);
-    expect(ctx.auth).toEqual({
-      kind: "authenticated",
-      isAuthenticated: true,
-      hasWorkspaceIdentity: true,
-    });
-    expect(mocks.getOrCreatePrototypeUser).not.toHaveBeenCalled();
-  });
-
-  it("falls back to the persisted prototype user when authentication is absent", async () => {
-    const prototype = user(42, "framefind-prototype-workspace", "prototype");
-    mocks.authenticateRequest.mockRejectedValue(new Error("no session"));
+  it("always binds every request to the persisted workspace user", async () => {
+    const prototype = user(42, "framefind-prototype-workspace");
     mocks.getOrCreatePrototypeUser.mockResolvedValue(prototype);
 
     const ctx = await createContext(contextOptions());
@@ -72,5 +49,6 @@ describe("prototype workspace context", () => {
       isAuthenticated: false,
       hasWorkspaceIdentity: true,
     });
+    expect(mocks.getOrCreatePrototypeUser).toHaveBeenCalledTimes(1);
   });
 });

@@ -4,7 +4,6 @@ import multer from "multer";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
@@ -32,7 +31,6 @@ async function startServer() {
   app.use(express.json({ limit: "32mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
-  registerOAuthRoutes(app);
 
   const originalVideoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024, files: 1 } }).single("video");
   app.post("/api/footage/upload/:clipId", (req, res) => originalVideoUpload(req, res, async error => {
@@ -40,7 +38,6 @@ async function startServer() {
     if (error) return res.status(400).json({ error: "The video form could not be read. Please try the upload again." });
     try {
       const ctx = await createContext({ req, res, info: {} } as unknown as Parameters<typeof createContext>[0]);
-      if (!ctx.user) return res.status(401).json({ error: "Sign in before uploading footage." });
       const clipId = Number(req.params.clipId);
       const clip = await getClipById(clipId);
       if (!Number.isInteger(clipId) || !clip || clip.userId !== ctx.user.id) return res.status(404).json({ error: "Footage record not found." });

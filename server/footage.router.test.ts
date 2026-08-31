@@ -6,9 +6,9 @@ function createPublicContext(): TrpcContext {
   return {
     user: null,
     auth: {
-      kind: "none",
+      kind: "prototype",
       isAuthenticated: false,
-      hasWorkspaceIdentity: false,
+      hasWorkspaceIdentity: true,
     },
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: {} as TrpcContext["res"],

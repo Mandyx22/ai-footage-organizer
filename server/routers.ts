@@ -18,8 +18,6 @@ import { invokeLLM, listLLMModels } from "./_core/llm";
 import { getFrameAnalysisProvider } from "./_core/frameAnalysisProvider";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { storagePut } from "./storage";
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 
 const metadataV2Schema = z
@@ -245,19 +243,6 @@ async function analyzeRepresentativeFrame(input: {
 
 export const appRouter = router({
   system: systemRouter,
-  auth: router({
-    me: publicProcedure.query(opts => ({
-      user: opts.ctx.user,
-      auth: opts.ctx.auth,
-    })),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      ctx.res.clearCookie(COOKIE_NAME, {
-        ...getSessionCookieOptions(ctx.req),
-        maxAge: -1,
-      });
-      return { success: true } as const;
-    }),
-  }),
   footage: router({
     sampleList: publicProcedure.query(() => ({
       clips: DEMO_CLIPS,

@@ -11,7 +11,7 @@ Framefind is not a timeline editor or an automatic vlog generator. It helps crea
 | Footage upload | Multiple-file browse and drag-and-drop input, client-side multi-frame sampling, progress UI, 50 MB prototype guardrail, and secure media persistence. |
 | AI metadata | Several sampled frames are sent server-side to a multimodal model, which returns a single clip-level Metadata V2 structure for subject, setting, time, lighting, colors, mood, shot type, camera motion, and possible uses. |
 | Private Workspace & projects | Personal uploads are organized into named editing projects (virtual folders) for separate trips, clients, and cuts; clips can remain loose or be moved between projects without relocating originals. |
-| Sample Playground | A separate, public, read-only route with fictional clips, metadata, images, and sample project groupings. It never mixes with authenticated uploads. |
+| Sample Playground | A separate, public, read-only route with fictional clips, metadata, images, and sample project groupings. It never mixes with your uploaded footage. |
 | Full clip preview & removal | A focused personal-clip panel with native playback, seekable progress control, project reassignment, and confirmation-based Workspace removal. |
 | Natural-language retrieval | Metadata-backed matching for phrases such as `quiet blue night shots`, with per-card matching cues. |
 | Find Similar | Ranked metadata similarity across color, lighting, mood, subject, composition, and camera motion. |
@@ -54,7 +54,7 @@ pnpm check
 pnpm test
 ```
 
-The scaffold uses managed authentication, database, object storage, and server-side AI helpers. A local database connection and the platform-provided environment variables are therefore required for full upload and AI behavior.
+Framefind is a single-user local workspace. It uses the managed database, object storage, and server-side AI helpers. A local database connection and the platform-provided environment variables are therefore required for full upload and AI behavior. There is no login: every request binds to the persisted local workspace identity.
 
 ## Terminal workflow
 

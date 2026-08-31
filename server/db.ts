@@ -11,7 +11,6 @@ import {
   type User,
 } from "../drizzle/schema";
 import { metadataV2ToLegacy, type ClipMetadataV2 } from "./footage";
-import { ENV } from "./_core/env";
 
 export const PROTOTYPE_USER_OPEN_ID = "framefind-prototype-workspace";
 
@@ -47,8 +46,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet[field] = user[field] ?? null;
     }
   });
-  values.role =
-    user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user");
+  values.role = user.role ?? "user";
   updateSet.role = values.role;
   await db
     .insert(users)
