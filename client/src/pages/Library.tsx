@@ -1,4 +1,5 @@
 import { UploadFootageDialog } from "@/components/UploadFootageDialog";
+import { ClipDescription } from "@/components/ClipDescription";
 import { LibrarySourceStatus } from "@/components/LibrarySourceStatus";
 import { SketchShell } from "@/components/SketchShell";
 import { useFootageSelection } from "@/contexts/FootageSelectionContext";
@@ -393,8 +394,6 @@ function ClipCard({
   onToggle: () => void;
 }) {
   const imageUrl = clip.thumbnailUrl ?? demoImages[clip.id];
-  const [expanded, setExpanded] = useState(false);
-  const canExpand = clip.description.length > 120;
   return (
     <article
       onClick={onFocus}
@@ -459,27 +458,7 @@ function ClipCard({
             {clip.time}
           </span>
         </div>
-        <p
-          className={cn(
-            "mt-2 text-xs leading-5 text-[#37332c]",
-            !expanded && "line-clamp-2"
-          )}
-        >
-          {clip.description}
-        </p>
-        {canExpand && (
-          <button
-            type="button"
-            aria-expanded={expanded}
-            onClick={event => {
-              event.stopPropagation();
-              setExpanded(value => !value);
-            }}
-            className="mt-1 text-[10px] font-bold text-[#bd7058] underline decoration-wavy underline-offset-4"
-          >
-            {expanded ? "Show less" : "Read more"}
-          </button>
-        )}
+        <ClipDescription description={clip.description} />
         <div className="mt-3 flex flex-wrap gap-1.5">
           {[clip.mood[0], clip.shotType].filter(Boolean).map(tag => (
             <span
