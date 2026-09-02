@@ -375,7 +375,7 @@ export const DEMO_CLIPS: FootageClip[] = [
   }),
 ];
 
-const synonyms: Record<string, string[]> = {
+export const lexicalSynonyms: Record<string, string[]> = {
   quiet: ["calm", "reflective", "still", "intimate", "lonely", "quiet"],
   blue: ["blue", "cobalt", "violet", "neon", "cool", "slate"],
   night: ["night", "dusk", "neon", "low light"],
@@ -385,7 +385,7 @@ const synonyms: Record<string, string[]> = {
   dreamy: ["dreamy", "reflective", "nostalgic", "soft"],
 };
 
-type SearchField = {
+export type SearchField = {
   key: string;
   label: string;
   weight: number;
@@ -604,7 +604,7 @@ export function clipAskPayload(clip: FootageClip) {
   };
 }
 
-function searchFields(document: SearchDocument): SearchField[] {
+export function searchFields(document: SearchDocument): SearchField[] {
   return [
     {
       key: "observed.subjects",
@@ -698,7 +698,7 @@ function queryTokens(query: string) {
 }
 
 function expandedConcepts(token: string) {
-  return unique([token, ...(synonyms[token] ?? [])]).map(normalizeText);
+  return unique([token, ...(lexicalSynonyms[token] ?? [])]).map(normalizeText);
 }
 
 function scoreField(field: SearchField, tokens: string[]) {

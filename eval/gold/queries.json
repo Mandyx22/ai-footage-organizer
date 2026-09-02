@@ -35,7 +35,7 @@
       "id": "q-summer-memory-montage",
       "text": "适合做一个安静夏日回忆 montage 的素材",
       "language": "mixed",
-      "categories": ["editing-intent", "chinese", "cross-lingual"],
+      "categories": ["editing-intent", "chinese", "mixed", "cross-lingual"],
       "judgments": [
         { "clipId": "syn-summer-memory-porch", "grade": 3 },
         { "clipId": "syn-lonely-warm-lakeside", "grade": 2 },
@@ -92,6 +92,17 @@
         { "clipId": "demo-108", "grade": 3 },
         { "clipId": "syn-lonely-warm-lakeside", "grade": 2 },
         { "clipId": "demo-105", "grade": 0 }
+      ]
+    },
+    {
+      "id": "q-summer-memory-zh",
+      "text": "适合做安静夏日回忆的素材",
+      "language": "zh",
+      "categories": ["editing-intent", "chinese"],
+      "judgments": [
+        { "clipId": "syn-quiet-summer-zh", "grade": 3 },
+        { "clipId": "syn-summer-memory-porch", "grade": 2 },
+        { "clipId": "syn-crowded-noon-market", "grade": 0 }
       ]
     }
   ]

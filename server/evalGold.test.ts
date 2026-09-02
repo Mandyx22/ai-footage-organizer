@@ -49,6 +49,21 @@ describe("M5A eval gold harness", () => {
     expect(blob).not.toMatch(/孤独|温暖/);
   });
 
+  it("keeps the mixed montage query distinct from a pure-Chinese editing query", () => {
+    const gold = loadExampleEvalGold();
+    const mixed = gold.queries.find(
+      query => query.id === "q-summer-memory-montage"
+    );
+    const pure = gold.queries.find(query => query.id === "q-summer-memory-zh");
+    expect(mixed?.text).toMatch(/montage/);
+    expect(mixed?.categories).toContain("mixed");
+    expect(pure?.text).toBe("适合做安静夏日回忆的素材");
+    expect(pure?.text).not.toMatch(/[a-z0-9]/i);
+    expect(gold.clips.some(clip => clip.id === "syn-quiet-summer-zh")).toBe(
+      true
+    );
+  });
+
   it("rejects judgments that point at unknown clips", () => {
     const gold = loadExampleEvalGold();
     expect(() =>

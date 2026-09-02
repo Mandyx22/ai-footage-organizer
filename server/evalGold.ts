@@ -29,6 +29,7 @@ export const EVAL_QUERY_CATEGORIES = [
   "editing-intent",
   "chinese",
   "english",
+  "mixed",
   "cross-lingual",
   "zero-lexical-overlap",
   "negative-compositional",

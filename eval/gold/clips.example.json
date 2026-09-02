@@ -381,6 +381,39 @@
           "editingUses": ["travel montage", "pace lift"]
         }
       }
+    },
+    {
+      "id": "syn-quiet-summer-zh",
+      "source": "synthetic",
+      "metadataV2": {
+        "description": "Afternoon light falls across an empty wooden porch.",
+        "observed": {
+          "visibleFacts": ["wooden porch", "afternoon light"],
+          "subjects": ["porch"],
+          "actions": ["sitting unused"],
+          "setting": "house porch",
+          "weather": ["sunny"],
+          "environmentType": "semi-outdoor",
+          "socialContext": "no people visible",
+          "activityLevel": "still",
+          "visualDensity": "minimal",
+          "spatialRelationships": ["empty porch in a wide, unhurried frame"],
+          "time": "afternoon",
+          "lighting": ["dappled", "soft"],
+          "colors": ["honey", "green"],
+          "shotType": "wide",
+          "cameraMotion": "likely static"
+        },
+        "interpretation": {
+          "mood": ["安静", "怀旧"],
+          "atmosphere": ["hazy", "summer"],
+          "sceneInterpretation": "a still domestic pause on a warm afternoon",
+          "uncertainty": ["the season is inferred from light and foliage"]
+        },
+        "creative": {
+          "editingUses": ["夏日回忆"]
+        }
+      }
     }
   ]
 }
