@@ -487,6 +487,26 @@ export const appRouter = router({
           });
         return { success };
       }),
+    rename: protectedProcedure
+      .input(
+        z.object({
+          clipId: z.number().int().positive(),
+          fileName: z.string().trim().min(1).max(255),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const clip = await db.renameClipForUser({
+          userId: ctx.user.id,
+          clipId: input.clipId,
+          fileName: input.fileName,
+        });
+        if (!clip)
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "This uploaded clip is not available in your workspace.",
+          });
+        return { clip: toFootageClip(clip) };
+      }),
     addToProject: protectedProcedure
       .input(
         z.object({

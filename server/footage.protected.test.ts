@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   createAnalyzedClip: vi.fn(),
   createEditingProject: vi.fn(),
   deleteClipForUser: vi.fn(),
+  renameClipForUser: vi.fn(),
   listClipsForUser: vi.fn(),
   listEditingProjectsForUser: vi.fn(),
   listProjectClipMemberships: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock("./db", () => ({
   addClipToProject: mocks.addClipToProject,
   createEditingProject: mocks.createEditingProject,
   deleteClipForUser: mocks.deleteClipForUser,
+  renameClipForUser: mocks.renameClipForUser,
   listClipsForUser: mocks.listClipsForUser,
   listEditingProjectsForUser: mocks.listEditingProjectsForUser,
   listProjectClipMemberships: mocks.listProjectClipMemberships,
@@ -570,10 +572,35 @@ describe("protected footage procedures", () => {
     expect(mocks.listClipsForUser).toHaveBeenCalledWith(9);
   });
 
-  it("adds to, removes from, and deletes only clips available in the authenticated workspace", async () => {
+  it("adds to, removes from, renames, and deletes only clips available in the authenticated workspace", async () => {
     mocks.addClipToProject.mockResolvedValue(true);
     mocks.removeClipFromProject.mockResolvedValue(true);
     mocks.deleteClipForUser.mockResolvedValue(true);
+    mocks.renameClipForUser.mockResolvedValue({
+      id: 333,
+      userId: 9,
+      fileName: "Desert stretch.mov",
+      mimeType: "video/quicktime",
+      sizeBytes: 1200,
+      durationMs: 8000,
+      thumbnailKey: "thumb.jpg",
+      thumbnailUrl: "/manus-storage/thumb.jpg",
+      mediaUrl: "/manus-storage/video.mov",
+      status: "ready",
+      description: "quiet desert stretch",
+      subjects: '["person"]',
+      setting: "desert",
+      timeOfDay: "twilight",
+      lighting: '["natural"]',
+      colors: '["sand"]',
+      moods: '["quiet"]',
+      shotType: "wide",
+      cameraMotion: "static",
+      possibleUses: '["opening"]',
+      metadataJson: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
     const caller = appRouter.createCaller(createAuthenticatedContext());
 
     await expect(
@@ -582,6 +609,11 @@ describe("protected footage procedures", () => {
     await expect(
       caller.footage.removeFromProject({ clipId: 333, projectId: 12 })
     ).resolves.toEqual({ success: true });
+    await expect(
+      caller.footage.rename({ clipId: 333, fileName: "Desert stretch.mov" })
+    ).resolves.toMatchObject({
+      clip: { id: 333, fileName: "Desert stretch.mov" },
+    });
     await expect(caller.footage.delete({ clipId: 333 })).resolves.toEqual({
       success: true,
     });
@@ -594,6 +626,11 @@ describe("protected footage procedures", () => {
       userId: 9,
       clipId: 333,
       projectId: 12,
+    });
+    expect(mocks.renameClipForUser).toHaveBeenCalledWith({
+      userId: 9,
+      clipId: 333,
+      fileName: "Desert stretch.mov",
     });
     expect(mocks.deleteClipForUser).toHaveBeenCalledWith({
       userId: 9,

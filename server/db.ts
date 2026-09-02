@@ -226,6 +226,21 @@ export async function deleteClipForUser(input: {
   return result[0].affectedRows > 0;
 }
 
+export async function renameClipForUser(input: {
+  clipId: number;
+  userId: number;
+  fileName: string;
+}) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .update(clips)
+    .set({ fileName: input.fileName })
+    .where(and(eq(clips.id, input.clipId), eq(clips.userId, input.userId)));
+  if (result[0].affectedRows === 0) return undefined;
+  return getClipById(input.clipId);
+}
+
 export async function listEditingProjectsForUser(userId: number) {
   const db = await getDb();
   if (!db) return [];
