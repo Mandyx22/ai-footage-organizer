@@ -2,22 +2,28 @@ import { AIChatBox, type Message } from "@/components/AIChatBox";
 import { UploadFootageDialog } from "@/components/UploadFootageDialog";
 import { SketchShell } from "@/components/SketchShell";
 import { useFootageSelection } from "@/contexts/FootageSelectionContext";
+import { loadAskMessages, saveAskMessages } from "@/lib/askConversation";
 import { demoImages, hideBrokenImageElement, type Clip } from "@/lib/footage";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { Check, ImagePlus, Sparkles, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
 export default function AskFootage() {
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => loadAskMessages());
   const { selectedIds, toggleSelection, isSelected, clearSelection } = useFootageSelection();
   const library = trpc.footage.list.useQuery();
   const askFootage = trpc.footage.ask.useMutation();
   const clips = (library.data?.clips ?? []) as Clip[];
   const selectedClips = clips.filter(clip => selectedIds.includes(clip.id));
+
+  useEffect(() => {
+    saveAskMessages(messages);
+  }, [messages]);
+
   const ask = async (question: string) => { if (!selectedIds.length) { toast.info("Circle one or more clips first, then Framefind has something to think with."); return; } setMessages(current => [...current, { role: "user", content: question }]); try { const response = await askFootage.mutateAsync({ question, clipIds: selectedIds }); setMessages(current => [...current, { role: "assistant", content: response.answer }]); } catch (error) { toast.error(error instanceof Error ? error.message : "The creative assistant is unavailable right now."); } };
   return <><SketchShell active="ask" onUpload={() => setUploadOpen(true)}><div className="mx-auto max-w-[1280px] px-4 pb-14 pt-8 sm:px-7 lg:px-10"><div><p className="font-mono text-[10px] uppercase tracking-[.18em] ink-muted">Creative reasoning, grounded in your material</p><h1 className="mt-2 font-hand text-5xl font-bold leading-[.87]">A thought partner,<br /><span className="scribble">not a director.</span></h1><p className="mt-3 max-w-2xl text-sm leading-6 ink-muted">Ask about the clips you have circled. Framefind uses only their visual notes, then gives a concrete direction, a sequence idea, and a caveat where the material is thin.</p></div><section className="mt-8 grid gap-5 lg:grid-cols-[.83fr_1.17fr]"><div className="space-y-5"><div className="tape note-blue rounded-2xl border-[1.5px] border-[#2c2922]/55 p-5 shadow-[3px_3px_0_rgba(44,41,34,.14)]"><div className="flex items-center justify-between gap-3"><div><p className="font-hand text-2xl font-bold">Your evidence pile</p><p className="mt-1 text-xs leading-5 ink-muted">Circle clips in the library or directly here. Selection remains visible so the assistant’s context is never hidden.</p></div><span className="rounded-md border border-[#2c2922]/30 bg-[#fffdf7] px-2 py-1 font-mono text-[10px]">{selectedIds.length} circled</span></div><div className="mt-5 grid grid-cols-2 gap-2">{clips.slice(0, 6).map(clip => <button key={clip.id} onClick={() => toggleSelection(clip.id)} className={cn("relative overflow-hidden rounded-xl border-[1.5px] bg-gradient-to-br from-[#7da5b4] via-[#b7cbd0] to-[#e4d6b6] text-left", isSelected(clip.id) ? "border-[#2c2922] shadow-[2px_2px_0_rgba(44,41,34,.2)]" : "border-[#2c2922]/35")}>{(clip.thumbnailUrl ?? demoImages[clip.id]) && <img src={clip.thumbnailUrl ?? demoImages[clip.id]} alt="" onError={event => hideBrokenImageElement(event.currentTarget)} className="aspect-[16/10] w-full object-cover" />}<span className={cn("absolute left-2 top-2 grid size-5 place-items-center rounded-full border", isSelected(clip.id) ? "border-[#2c2922] bg-[#f4ad89]" : "border-[#2c2922]/45 bg-[#fffdf7]/90")}><Check className="size-3" /></span><p className="truncate bg-[#fffdf7] px-2 py-1.5 font-mono text-[9px] ink-muted">{clip.fileName}</p></button>)}</div><div className="mt-4 flex items-center justify-between"><Link href="/library" className="text-xs font-semibold underline decoration-wavy decoration-[#e69275] underline-offset-4">Browse full library</Link>{selectedIds.length > 0 && <button onClick={clearSelection} className="flex items-center gap-1 text-xs ink-muted hover:text-[#2c2922]"><X className="size-3" />Clear</button>}</div></div><div className="paper-panel rounded-2xl p-5"><ImagePlus className="size-5 text-[#bd7058]" /><p className="mt-4 font-hand text-2xl font-bold">A good question is specific.</p><p className="mt-1 text-xs leading-5 ink-muted">Ask for an opening, a visual rhythm, an emotional read, a missing transition, or an honest check on coverage. Framefind cannot make editorial decisions for footage you have not selected.</p></div></div><AIChatBox messages={messages} onSendMessage={ask} isLoading={askFootage.isPending} height="560px" className="paper-panel overflow-hidden border-[#2c2922]/58 bg-[#fffdf7] shadow-[3px_3px_0_rgba(44,41,34,.14)]" placeholder="Ask about the circled clips…" emptyStateMessage={selectedIds.length ? "Your selected clips are ready for a question." : "Circle a few clips to give this conversation something to hold."} suggestedPrompts={["What could make a strong opening?", "What visual rhythm does this suggest?", "What am I missing for a 30-second montage?"]} /></section><section className="note-pink mt-7 rounded-2xl border-[1.5px] border-[#2c2922]/45 p-4"><div className="flex gap-3"><Sparkles className="mt-0.5 size-5" /><p className="text-xs leading-5 ink-muted"><b className="text-[#2c2922]">How this feature works.</b> Your question and the structured visual notes for the selected clips are sent to the assistant. The answer is a creative prompt, not an objective interpretation of your footage.</p></div></section></div></SketchShell><UploadFootageDialog open={uploadOpen} onOpenChange={setUploadOpen} /></>;
 }
