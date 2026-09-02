@@ -135,47 +135,52 @@ Implementation note:
 
 - The single-user MVP uses one persisted prototype user in the existing `users` table as a local / single-user prototype workspace identity. This is not production anonymous-user isolation.
 
-### Milestone 2 - One real video end-to-end
+### Milestone 2 - One real video end-to-end (COMPLETE)
 
-- [ ] Select a real video.
-- [ ] Run browser multi-frame sampling.
-- [ ] Run AI metadata analysis.
-- [ ] Create DB clip record.
-- [ ] Store thumbnail.
-- [ ] Store original video in object storage.
-- [ ] Mark clip status `ready`.
-- [ ] Show clip in My Library.
-- [ ] Play the uploaded video in preview.
-
-Completion criteria:
-
-- [ ] A real video can be manually uploaded, analyzed, saved, displayed in My Library with metadata, and played back.
-
-### Milestone 3 - Metadata V2
-
-- [ ] Define structured clip metadata.
-- [ ] Distinguish AI-observed facts from AI-inferred fields and AI-suggested editing uses.
-- [ ] Include `visibleFacts`, `description`, `subjects`, `setting`, `time`, `lighting`, `mood`, `shotType`, `cameraMotion`, `editingUses`, and `uncertainty`.
-- [ ] Decide metadata persistence schema during this milestone.
+- [x] Select a real video.
+- [x] Run browser multi-frame sampling.
+- [x] Run AI metadata analysis.
+- [x] Create DB clip record.
+- [x] Store thumbnail.
+- [x] Store original video in object storage.
+- [x] Mark clip status `ready`.
+- [x] Show clip in My Library.
+- [x] Play the uploaded video in preview.
 
 Completion criteria:
 
-- [ ] The metadata model clearly separates observed, inferred, and suggested information.
+- [x] A real video can be manually uploaded, analyzed, saved, displayed in My Library with metadata, and played back.
 
-### Milestone 4 - Metadata / lexical retrieval baseline
+Production validation (2026-09-02):
 
-- [ ] Stabilize metadata / lexical retrieval behavior.
-- [ ] Search across description, subjects, setting, lighting, colors, mood, shot type, camera motion, and editing uses / possible uses.
-- [ ] Use metadata / token / synonym matching during this milestone.
-- [ ] Do not introduce embeddings during this milestone.
-- [ ] Do not describe keyword / metadata matching as vector semantic search.
-- [ ] Improve explainable ranking.
-- [ ] Add fixed fixture queries.
-- [ ] Return explainable match reasons.
+- Verified on https://ai-footage-organizer-production.up.railway.app/ with real uploads (e.g. `IMG_0532.MOV`): `status=ready`, non-null `metadataJson`, `/manus-storage` thumbnail/video proxy returns 307, and personal Search returns the clip with explainable match reasons.
+- Historical clip `A001_01111028_C019.MOV` (pre-V2 ingest) may still have `metadataJson=null`; that does not block this milestone for the current upload path.
+
+### Milestone 3 - Metadata V2 (COMPLETE)
+
+- [x] Define structured clip metadata.
+- [x] Distinguish AI-observed facts from AI-inferred fields and AI-suggested editing suggestions.
+- [x] Include `visibleFacts`, `description`, `subjects`, `setting`, `time`, `lighting`, `mood`, `shotType`, `cameraMotion`, `editingUses`, and `uncertainty`.
+- [x] Decide metadata persistence schema during this milestone.
 
 Completion criteria:
 
-- [ ] Metadata search behavior is predictable, tested, and honestly labeled.
+- [x] The metadata model clearly separates observed, interpretation, and creative layers in `metadataJson` (legacy flat columns remain display-compatible via `metadataV2ToLegacy`).
+
+### Milestone 4 - Metadata / lexical retrieval baseline (COMPLETE)
+
+- [x] Stabilize metadata / lexical retrieval behavior.
+- [x] Search across description, subjects, setting, lighting, colors, mood, shot type, camera motion, and creative `editingUses` (via Metadata V2 `buildSearchDocument`; legacy `possibleUses` is display-only).
+- [x] Use metadata / token / synonym matching during this milestone.
+- [x] Do not introduce embeddings during this milestone.
+- [x] Do not describe keyword / metadata matching as vector semantic search.
+- [x] Improve explainable ranking.
+- [x] Add fixed fixture queries.
+- [x] Return explainable match reasons.
+
+Completion criteria:
+
+- [x] Metadata search behavior is predictable, tested, and honestly labeled.
 
 ### Milestone 5 - Semantic Retrieval with Embeddings
 
