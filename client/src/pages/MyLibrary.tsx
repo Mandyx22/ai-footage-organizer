@@ -36,7 +36,7 @@ import {
   WandSparkles,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 
@@ -150,6 +150,15 @@ export default function MyLibrary() {
       toast.success("Clip removed from your workspace.");
     },
   });
+  const renameClip = trpc.footage.rename.useMutation({
+    onSuccess: async () => {
+      await refreshProjectList();
+      toast.success("Clip renamed.");
+    },
+    onError: error => {
+      toast.error(error.message || "Could not rename that clip.");
+    },
+  });
   const justUploaded =
     new URLSearchParams(window.location.search).get("uploaded") === "1";
   const personalSource = getMyLibraryPresentation(library.data, justUploaded);
@@ -189,7 +198,10 @@ export default function MyLibrary() {
   const selectedProjectForUpload =
     activeProjectId === undefined ? null : activeProjectId;
   const mutationPending =
-    createProject.isPending || addToProject.isPending || removeFromProject.isPending;
+    createProject.isPending ||
+    addToProject.isPending ||
+    removeFromProject.isPending ||
+    renameClip.isPending;
 
   const submitProjectForm = async () => {
     if (!projectName.trim()) return;
@@ -587,12 +599,17 @@ export default function MyLibrary() {
         selected={focusedClip ? isSelected(focusedClip.id) : false}
         projects={projects.data?.projects ?? []}
         deletePending={deleteClip.isPending || mutationPending}
+        renamePending={renameClip.isPending}
         onOpenChange={setDetailOpen}
         onToggle={() => focusedClip && toggleSelection(focusedClip.id)}
         onFindSimilar={() => {
           setShowSimilar(true);
           setDetailOpen(false);
         }}
+        onRename={fileName =>
+          focusedClip &&
+          renameClip.mutate({ clipId: focusedClip.id, fileName })
+        }
         onToggleProject={(projectId, keep) =>
           focusedClip &&
           (keep
@@ -810,9 +827,11 @@ function ClipDetailDialog({
   selected,
   projects,
   deletePending,
+  renamePending,
   onOpenChange,
   onToggle,
   onFindSimilar,
+  onRename,
   onToggleProject,
   onDelete,
 }: {
@@ -821,12 +840,38 @@ function ClipDetailDialog({
   selected: boolean;
   projects: ProjectSummary[];
   deletePending: boolean;
+  renamePending: boolean;
   onOpenChange: (open: boolean) => void;
   onToggle: () => void;
   onFindSimilar: () => void;
+  onRename: (fileName: string) => void;
   onToggleProject: (projectId: number, keepInProject: boolean) => void;
   onDelete: () => void;
 }) {
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditingName(false);
+    setDraftName(clip?.fileName ?? "");
+  }, [clip?.id, clip?.fileName, open]);
+
+  useEffect(() => {
+    if (editingName) nameInputRef.current?.focus();
+  }, [editingName]);
+
+  const commitRename = () => {
+    const nextName = draftName.trim();
+    if (!clip || !nextName || nextName === clip.fileName) {
+      setEditingName(false);
+      setDraftName(clip?.fileName ?? "");
+      return;
+    }
+    onRename(nextName);
+    setEditingName(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto border-[1.5px] border-[#2c2922] bg-[#fffdf7] text-[#2c2922] shadow-[4px_4px_0_#2c2922] sm:max-w-4xl">
@@ -836,9 +881,42 @@ function ClipDetailDialog({
               <p className="font-mono text-[10px] uppercase tracking-[.16em] ink-muted">
                 Your clip notes
               </p>
-              <DialogTitle className="break-words font-hand text-3xl font-bold leading-none sm:text-4xl">
-                {clip.fileName}
-              </DialogTitle>
+              {editingName ? (
+                <input
+                  ref={nameInputRef}
+                  value={draftName}
+                  disabled={renamePending}
+                  maxLength={255}
+                  onChange={event => setDraftName(event.target.value)}
+                  onBlur={commitRename}
+                  onKeyDown={event => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      commitRename();
+                    }
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      setEditingName(false);
+                      setDraftName(clip.fileName);
+                    }
+                  }}
+                  className="mt-1 w-full rounded-lg border-[1.5px] border-[#2c2922] bg-white px-3 py-2 font-hand text-3xl font-bold leading-none sm:text-4xl"
+                />
+              ) : (
+                <DialogTitle
+                  title="Double-click to rename"
+                  onDoubleClick={() => {
+                    setDraftName(clip.fileName);
+                    setEditingName(true);
+                  }}
+                  className="cursor-text break-words font-hand text-3xl font-bold leading-none sm:text-4xl"
+                >
+                  {clip.fileName}
+                </DialogTitle>
+              )}
+              {!editingName && (
+                <p className="text-[11px] ink-muted">Double-click the name to rename.</p>
+              )}
             </DialogHeader>
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(240px,.65fr)]">
               <div className="min-w-0">
