@@ -15,7 +15,8 @@ import {
   type ClipMetadataV2,
   type FootageClip,
 } from "./footage";
-import { invokeLLM, listLLMModels } from "./_core/llm";
+import { invokeLLM } from "./_core/llm";
+import { ENV } from "./_core/env";
 import { getFrameAnalysisProvider } from "./_core/frameAnalysisProvider";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { storagePut } from "./storage";
@@ -178,12 +179,10 @@ async function personalClipsWithMembership(
   );
 }
 
-async function modelId(preferred: string, fallback: string) {
-  const { data } = await listLLMModels();
-  return (
-    data.find(model => model.id === preferred)?.id ??
-    data.find(model => model.id === fallback)?.id
-  );
+const DEFAULT_OPENAI_ASK_MODEL = "gpt-4o-mini";
+
+function resolveOpenAiAskModel() {
+  return ENV.openAiAskModel.trim() || DEFAULT_OPENAI_ASK_MODEL;
 }
 
 async function clipsFor(userId?: number | null): Promise<FootageClip[]> {
@@ -543,10 +542,7 @@ export const appRouter = router({
             code: "NOT_FOUND",
             message: "Select at least one clip from this workspace first.",
           });
-        const selectedModel = await modelId(
-          "gpt-5-mini",
-          "gemini-3-flash-preview"
-        );
+        const selectedModel = resolveOpenAiAskModel();
         const context = selected.map(clipAskPayload);
         const response = await invokeLLM({
           model: selectedModel,

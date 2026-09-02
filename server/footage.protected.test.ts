@@ -968,7 +968,6 @@ describe("protected footage procedures", () => {
 
   it("returns a grounded creative answer when selected footage metadata is available", async () => {
     mocks.listClipsForUser.mockResolvedValue([]);
-    mocks.listLLMModels.mockResolvedValue({ data: [{ id: "gpt-5-mini" }] });
     mocks.invokeLLM.mockResolvedValue({
       choices: [
         {
@@ -988,7 +987,7 @@ describe("protected footage procedures", () => {
 
     expect(result.answer).toContain("blue night street");
     expect(mocks.invokeLLM).toHaveBeenCalledWith(
-      expect.objectContaining({ model: "gpt-5-mini" })
+      expect.objectContaining({ model: "gpt-4o-mini" })
     );
     const userContent = mocks.invokeLLM.mock.calls[0]?.[0]?.messages?.find(
       (message: { role: string }) => message.role === "user"

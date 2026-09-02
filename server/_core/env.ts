@@ -6,6 +6,8 @@ export const ENV = {
   frameAnalysisProvider: process.env.FRAME_ANALYSIS_PROVIDER ?? "qwen",
   /** OpenAI vision model for frame analysis when FRAME_ANALYSIS_PROVIDER=openai. */
   openAiFrameAnalysisModel: process.env.OPENAI_FRAME_ANALYSIS_MODEL ?? "",
+  /** OpenAI chat model for Ask My Footage. */
+  openAiAskModel: process.env.OPENAI_ASK_MODEL ?? "",
   qwenApiKey: process.env.DASHSCOPE_API_KEY ?? "",
   qwenBaseUrl: process.env.QWEN_BASE_URL ?? "",
   qwenModel: process.env.QWEN_MODEL ?? "qwen3.7-plus",
