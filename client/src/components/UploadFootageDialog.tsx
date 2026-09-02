@@ -7,7 +7,7 @@ import { discardFailedTemporaryClip, finalizeUploadCompletion, getPostUploadDest
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { Film, Loader2, UploadCloud } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
@@ -20,6 +20,14 @@ export function UploadFootageDialog({ open, onOpenChange, projectId = null }: { 
   const utils = trpc.useUtils();
   const analyzeFrame = trpc.footage.analyzeFrame.useMutation();
   const deleteClip = trpc.footage.delete.useMutation();
+
+  useEffect(() => {
+    if (!open) return;
+    setJobs([]);
+    setLibraryActionReady(false);
+    setIsDragging(false);
+  }, [open]);
+
   const processFiles = async (files: File[]) => {
     const videoFiles = files.filter(file => file.type.startsWith("video/"));
     if (!videoFiles.length) { toast.error("Please choose one or more video files."); return; }
