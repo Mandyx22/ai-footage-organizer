@@ -6,7 +6,7 @@ Framefind should not compete by building another full editor. The opportunity is
 
 | Product | What it already does well | Framefind’s differentiated wedge |
 | --- | --- | --- |
-| CapCut | Combines cloud media management with editing, templates, captions, effects, and collaboration through its Myspace and Teamspace workflows.[1] | Help a casual creator rediscover *their own* unplanned footage by semantic cues such as mood, lighting, color, and possible editorial role — before entering an editing project. |
+| CapCut | Combines cloud media management with editing, templates, captions, effects, and collaboration through its Myspace and Teamspace workflows.[1] | Help a casual creator rediscover *their own* unplanned footage by metadata cues such as mood, lighting, color, and possible editorial role — before entering an editing project. |
 | Adobe Premiere | Supports professional metadata workflows, project organization, media-intelligence search, similar-visual search, and broader editing / production controls.[2] | Offer a lighter, less technical creative-retrieval surface for users who do not build bins, schemas, or professional project structures. |
 | Descript | Makes editing accessible through transcripts, document-like editing, audio cleanup, automated clipping, and an AI co-editor oriented around production and publishing.[3] | Make visual footage exploration the primary task: recognize what was captured, group it, and reason about coverage before any transcript-led edit begins. |
 

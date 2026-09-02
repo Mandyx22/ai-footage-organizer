@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildProjectSuggestions,
   buildSearchDocument,
+  clipAskPayload,
   DEMO_CLIPS,
   metadataV2ToLegacy,
   rankFootage,
@@ -110,6 +112,88 @@ describe("footage retrieval", () => {
     const results = rankSimilar(DEMO_CLIPS, 101, "color");
     expect(results[0]?.clip.colors).toContain("blue");
     expect(results.map(result => result.clip.id)).toContain(104);
+  });
+
+  it("keeps DEMO clips on Metadata V2 without inferred relationships", () => {
+    expect(
+      DEMO_CLIPS.every(clip => clip.metadataJson?.observed && clip.metadataJson.creative)
+    ).toBe(true);
+    expect(
+      DEMO_CLIPS.flatMap(clip => [
+        clip.description,
+        ...(clip.subjects ?? []),
+        ...(clip.metadataJson?.observed.subjects ?? []),
+      ]).join(" ")
+    ).not.toMatch(/\bfriends?\b|\bcouple\b|\bfamily\b/i);
+    expect(
+      new Set(DEMO_CLIPS.map(clip => clip.metadataJson?.observed.cameraMotion))
+    ).toEqual(
+      new Set([
+        "likely tracking",
+        "likely static",
+        "likely handheld",
+        "likely moving",
+      ])
+    );
+  });
+
+  it("ranks similar clips from Metadata V2 even when legacy colour fields disagree", () => {
+    const reference = testClip(1, {
+      colors: ["green"],
+      metadataJson: metadataV2({ colors: ["blue"] }),
+    });
+    const match = testClip(2, {
+      colors: ["red"],
+      metadataJson: metadataV2({ colors: ["blue"] }),
+    });
+
+    const results = rankSimilar([reference, match], 1, "color");
+    expect(results.map(result => result.clip.id)).toEqual([2]);
+  });
+
+  it("suggests quiet-in-between from likely static camera motion", () => {
+    const clips = [
+      testClip(1, {
+        metadataJson: metadataV2({
+          mood: ["energetic"],
+          cameraMotion: "likely static",
+          time: "afternoon",
+        }),
+      }),
+      testClip(2, {
+        metadataJson: metadataV2({
+          mood: ["playful"],
+          cameraMotion: "likely static",
+          time: "afternoon",
+        }),
+      }),
+    ];
+
+    expect(
+      buildProjectSuggestions(clips).map(group => group.id)
+    ).toContain("quiet-in-between");
+  });
+
+  it("sends layered Metadata V2 in Ask payloads", () => {
+    const payload = clipAskPayload(
+      testClip(1, {
+        mood: ["should not appear as a top-level fact"],
+        metadataJson: metadataV2({
+          description: "a person sits beside a lake at sunset",
+          mood: ["quiet"],
+          editingUses: ["memory montage"],
+        }),
+      })
+    );
+
+    expect(payload).toMatchObject({
+      description: "a person sits beside a lake at sunset",
+      observed: { subjects: ["person", "lake"] },
+      interpretation: { mood: ["quiet"] },
+      creative: { editingUses: ["memory montage"] },
+    });
+    expect(payload).not.toHaveProperty("possibleUses");
+    expect(payload).not.toHaveProperty("mood");
   });
 
   it("projects Metadata V2 into the legacy compatibility fields", () => {

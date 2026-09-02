@@ -1,6 +1,6 @@
 ---
 name: framefind-metadata
-description: Framefind Metadata V2 invariants — the canonical structured metadata schema, frame-analysis prompt rules, strict response schema, search document and ranking weights, and synonym concepts. Use when touching AI footage analysis, metadata schemas, retrieval/search, Find Similar, collection suggestions, or any code that reads/writes clip metadataJson. Keep observed/interpretation/creative separation intact.
+description: Framefind Metadata V2 invariants — the canonical structured metadata schema, frame-analysis prompt rules, strict response schema, search document and ranking weights, and synonym concepts. Use when touching AI footage analysis, metadata schemas, retrieval/search, Find Similar, project suggestions, or any code that reads/writes clip metadataJson. Keep observed/interpretation/creative separation intact.
 ---
 
 # Framefind Metadata V2
@@ -27,7 +27,7 @@ impressions**, never objective claims.
 
 - **Legacy columns are display-only.** Flattened clip fields (`subjects`,
   `mood`, `possibleUses`, …) may feed existing UI chips. All search,
-  ranking, Find Similar, collection suggestions, and other metadata logic
+  ranking, Find Similar, project suggestions, and other metadata logic
   must read Metadata V2 via `buildSearchDocument` / `metadataJson` — never
   the legacy fields as the source of truth.
 - **Ask must send V2.** The Ask procedure's model context is the

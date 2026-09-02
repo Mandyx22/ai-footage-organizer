@@ -4,6 +4,7 @@ import * as db from "./db";
 import {
   ACTIVITY_LEVELS,
   buildProjectSuggestions,
+  clipAskPayload,
   DEMO_CLIPS,
   ENVIRONMENT_TYPES,
   rankFootage,
@@ -546,27 +547,14 @@ export const appRouter = router({
           "gpt-5-mini",
           "gemini-3-flash-preview"
         );
-        const context = selected.map(clip => ({
-          fileName: clip.fileName,
-          durationSeconds: Math.round(clip.durationMs / 100) / 10,
-          description: clip.description,
-          subjects: clip.subjects,
-          setting: clip.setting,
-          time: clip.time,
-          lighting: clip.lighting,
-          colors: clip.colors,
-          mood: clip.mood,
-          shotType: clip.shotType,
-          cameraMotion: clip.cameraMotion,
-          possibleUses: clip.possibleUses,
-        }));
+        const context = selected.map(clipAskPayload);
         const response = await invokeLLM({
           model: selectedModel,
           messages: [
             {
               role: "system",
               content:
-                "You are Framefind, a thoughtful creative retrieval assistant. Answer only from the supplied footage metadata. Be specific, encouraging, and concise. Do not invent clips or claim you watched the video. Provide a suggested direction, a practical sequence idea, and one useful gap or caveat when applicable.",
+                "You are Framefind, a thoughtful creative retrieval assistant. Answer only from the supplied footage metadata. Keep observed visual facts, subjective interpretation, and creative editingUses separate; do not treat mood or editing suggestions as visual fact. Be specific, encouraging, and concise. Do not invent clips or claim you watched the video. Provide a suggested direction, a practical sequence idea, and one useful gap or caveat when applicable.",
             },
             {
               role: "user",

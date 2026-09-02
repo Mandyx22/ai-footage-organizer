@@ -990,8 +990,14 @@ describe("protected footage procedures", () => {
     expect(mocks.invokeLLM).toHaveBeenCalledWith(
       expect.objectContaining({ model: "gpt-5-mini" })
     );
-    const messages = mocks.invokeLLM.mock.calls[0]?.[0]?.messages;
-    expect(JSON.stringify(messages)).toContain("IMG_4821.MOV");
-    expect(JSON.stringify(messages)).toContain("IMG_4887.MOV");
+    const userContent = mocks.invokeLLM.mock.calls[0]?.[0]?.messages?.find(
+      (message: { role: string }) => message.role === "user"
+    )?.content;
+    expect(userContent).toContain("IMG_4821.MOV");
+    expect(userContent).toContain("IMG_4887.MOV");
+    expect(userContent).toContain('"observed"');
+    expect(userContent).toContain('"interpretation"');
+    expect(userContent).toContain('"creative"');
+    expect(userContent).not.toContain('"possibleUses"');
   });
 });

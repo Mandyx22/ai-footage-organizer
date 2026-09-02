@@ -116,11 +116,11 @@ export type ProjectSuggestion = {
   clipIds: number[];
 };
 
-const p = (
+const demoClip = (
   id: number,
   fileName: string,
   durationMs: number,
-  metadata: ClipMetadata
+  metadata: ClipMetadataV2
 ): FootageClip => ({
   id,
   projectIds: [],
@@ -130,111 +130,248 @@ const p = (
   mediaUrl: null,
   status: "ready",
   createdAt: new Date("2026-08-01T10:00:00Z"),
-  ...metadata,
+  ...metadataV2ToLegacy(metadata),
+  metadataJson: metadata,
 });
 
 export const DEMO_CLIPS: FootageClip[] = [
-  p(101, "IMG_4821.MOV", 8200, {
+  demoClip(101, "IMG_4821.MOV", 8200, {
     description:
       "Two people crossing a cobalt-blue side street under neon signs.",
-    subjects: ["people"],
-    setting: "city street",
-    time: "night",
-    lighting: ["neon", "low light"],
-    colors: ["blue", "magenta"],
-    mood: ["dreamy", "energetic"],
-    shotType: "medium",
-    cameraMotion: "handheld tracking",
-    possibleUses: ["nightlife montage", "transition"],
+    observed: {
+      visibleFacts: ["two people", "shop signs", "side street"],
+      subjects: ["people"],
+      actions: ["crossing a street"],
+      setting: "city street",
+      weather: [],
+      environmentType: "outdoor",
+      socialContext: "pair",
+      activityLevel: "moderate activity",
+      visualDensity: "busy",
+      spatialRelationships: ["two people under signs in a medium frame"],
+      time: "night",
+      lighting: ["neon", "low light"],
+      colors: ["blue", "magenta"],
+      shotType: "medium",
+      cameraMotion: "likely tracking",
+    },
+    interpretation: {
+      mood: ["dreamy", "energetic"],
+      atmosphere: ["neon", "urban"],
+      sceneInterpretation: "a night walk on a lit commercial street",
+      uncertainty: ["camera motion inferred from still frames"],
+    },
+    creative: {
+      editingUses: ["nightlife montage", "transition"],
+    },
   }),
-  p(102, "DJI_0308.MP4", 14600, {
+  demoClip(102, "DJI_0308.MP4", 14600, {
     description:
       "A quiet wide view of warm light falling through a station window.",
-    subjects: ["train", "window"],
-    setting: "train interior",
-    time: "sunset",
-    lighting: ["golden hour", "soft"],
-    colors: ["amber", "cream"],
-    mood: ["reflective", "calm"],
-    shotType: "wide",
-    cameraMotion: "static",
-    possibleUses: ["opening", "day-to-night transition"],
+    observed: {
+      visibleFacts: ["train window", "warm light", "empty seats"],
+      subjects: ["train", "window"],
+      actions: ["sitting still"],
+      setting: "train interior",
+      weather: [],
+      environmentType: "indoor",
+      socialContext: "no people visible",
+      activityLevel: "still",
+      visualDensity: "sparse",
+      spatialRelationships: ["wide interior with light at the window"],
+      time: "sunset",
+      lighting: ["golden hour", "soft"],
+      colors: ["amber", "cream"],
+      shotType: "wide",
+      cameraMotion: "likely static",
+    },
+    interpretation: {
+      mood: ["reflective", "calm"],
+      atmosphere: ["warm", "still"],
+      sceneInterpretation: "a pause during travel at sunset",
+      uncertainty: ["exact station location is not visible"],
+    },
+    creative: {
+      editingUses: ["opening", "day-to-night transition"],
+    },
   }),
-  p(103, "IMG_4887.MOV", 6100, {
+  demoClip(103, "IMG_4887.MOV", 6100, {
     description:
       "Steam rises from ramen bowls as people laugh across a wooden table.",
-    subjects: ["food", "people"],
-    setting: "restaurant",
-    time: "night",
-    lighting: ["warm practical", "low light"],
-    colors: ["amber", "red"],
-    mood: ["intimate", "lively"],
-    shotType: "close-up",
-    cameraMotion: "gentle handheld",
-    possibleUses: ["food montage", "detail cutaway"],
+    observed: {
+      visibleFacts: ["ramen bowls", "steam", "wooden table", "people"],
+      subjects: ["food", "people"],
+      actions: ["eating at a table"],
+      setting: "restaurant",
+      weather: [],
+      environmentType: "indoor",
+      socialContext: "small group",
+      activityLevel: "low activity",
+      visualDensity: "balanced",
+      spatialRelationships: ["bowls in the foreground with people across the table"],
+      time: "night",
+      lighting: ["warm practical", "low light"],
+      colors: ["amber", "red"],
+      shotType: "close-up",
+      cameraMotion: "likely handheld",
+    },
+    interpretation: {
+      mood: ["intimate", "lively"],
+      atmosphere: ["warm", "close"],
+      sceneInterpretation: "a shared meal in a small restaurant",
+      uncertainty: ["number of people beyond the table edge is unclear"],
+    },
+    creative: {
+      editingUses: ["food montage", "detail cutaway"],
+    },
   }),
-  p(104, "IMG_4902.MOV", 12400, {
+  demoClip(104, "IMG_4902.MOV", 12400, {
     description:
       "Rain traces luminous reflections across an almost empty city intersection.",
-    subjects: ["street", "rain"],
-    setting: "city street",
-    time: "night",
-    lighting: ["neon", "low light"],
-    colors: ["blue", "violet"],
-    mood: ["quiet", "lonely"],
-    shotType: "wide",
-    cameraMotion: "static",
-    possibleUses: ["reflective opening", "transition"],
+    observed: {
+      visibleFacts: ["rain", "wet street", "reflections", "empty intersection"],
+      subjects: ["street", "rain"],
+      actions: ["rain falling"],
+      setting: "city street",
+      weather: ["rainy"],
+      environmentType: "outdoor",
+      socialContext: "no people visible",
+      activityLevel: "still",
+      visualDensity: "sparse",
+      spatialRelationships: ["wide empty intersection with reflected lights"],
+      time: "night",
+      lighting: ["neon", "low light"],
+      colors: ["blue", "violet"],
+      shotType: "wide",
+      cameraMotion: "likely static",
+    },
+    interpretation: {
+      mood: ["quiet", "lonely"],
+      atmosphere: ["wet", "hazy"],
+      sceneInterpretation: "a paused city after rain",
+      uncertainty: ["camera motion inferred from still frames"],
+    },
+    creative: {
+      editingUses: ["reflective opening", "transition"],
+    },
   }),
-  p(105, "GOPR_1172.MP4", 9400, {
+  demoClip(105, "GOPR_1172.MP4", 9400, {
     description:
       "A sunlit cyclist moves through a tree-lined path in the morning.",
-    subjects: ["cyclist", "nature"],
-    setting: "park",
-    time: "morning",
-    lighting: ["daylight", "dappled"],
-    colors: ["green", "warm yellow"],
-    mood: ["free", "optimistic"],
-    shotType: "medium",
-    cameraMotion: "forward motion",
-    possibleUses: ["travel montage", "pace lift"],
+    observed: {
+      visibleFacts: ["cyclist", "trees", "path"],
+      subjects: ["cyclist", "nature"],
+      actions: ["riding a bicycle"],
+      setting: "park",
+      weather: ["sunny"],
+      environmentType: "outdoor",
+      socialContext: "alone",
+      activityLevel: "active",
+      visualDensity: "balanced",
+      spatialRelationships: ["cyclist moving through a tree-lined path"],
+      time: "morning",
+      lighting: ["daylight", "dappled"],
+      colors: ["green", "warm yellow"],
+      shotType: "medium",
+      cameraMotion: "likely moving",
+    },
+    interpretation: {
+      mood: ["free", "optimistic"],
+      atmosphere: ["airy", "bright"],
+      sceneInterpretation: "a morning ride through a park",
+      uncertainty: ["exact park location is not visible"],
+    },
+    creative: {
+      editingUses: ["travel montage", "pace lift"],
+    },
   }),
-  p(106, "IMG_4938.MOV", 5300, {
-    description: "Hands turn the pages of a small book beside a hotel window.",
-    subjects: ["hands", "book"],
-    setting: "hotel room",
-    time: "afternoon",
-    lighting: ["soft window light"],
-    colors: ["cream", "brown"],
-    mood: ["quiet", "nostalgic"],
-    shotType: "close-up",
-    cameraMotion: "static",
-    possibleUses: ["breathing room", "detail cutaway"],
+  demoClip(106, "IMG_4938.MOV", 5300, {
+    description: "Hands turn the pages of a small book beside a window.",
+    observed: {
+      visibleFacts: ["hands", "book", "window"],
+      subjects: ["hands", "book"],
+      actions: ["turning pages"],
+        setting: "room by a window",
+      weather: [],
+      environmentType: "indoor",
+      socialContext: "alone",
+      activityLevel: "low activity",
+      visualDensity: "minimal",
+      spatialRelationships: ["hands and book in close-up beside a window"],
+      time: "afternoon",
+      lighting: ["soft window light"],
+      colors: ["cream", "brown"],
+      shotType: "close-up",
+      cameraMotion: "likely static",
+    },
+    interpretation: {
+      mood: ["quiet", "nostalgic"],
+      atmosphere: ["soft", "still"],
+      sceneInterpretation: "a quiet indoor pause",
+      uncertainty: ["the exact kind of room is not labeled in the frames"],
+    },
+    creative: {
+      editingUses: ["breathing room", "detail cutaway"],
+    },
   }),
-  p(107, "IMG_4951.MOV", 7600, {
+  demoClip(107, "IMG_4951.MOV", 7600, {
     description: "People lean into the frame beneath a glowing shop sign.",
-    subjects: ["people"],
-    setting: "city street",
-    time: "night",
-    lighting: ["neon", "mixed"],
-    colors: ["blue", "pink"],
-    mood: ["playful", "energetic"],
-    shotType: "close-up",
-    cameraMotion: "handheld",
-    possibleUses: ["nightlife montage", "memory moment"],
+    observed: {
+      visibleFacts: ["people", "shop sign", "close faces"],
+      subjects: ["people"],
+      actions: ["leaning into frame"],
+      setting: "city street",
+      weather: [],
+      environmentType: "outdoor",
+      socialContext: "small group",
+      activityLevel: "low activity",
+      visualDensity: "balanced",
+      spatialRelationships: ["faces close to camera under a sign"],
+      time: "night",
+      lighting: ["neon", "mixed"],
+      colors: ["blue", "pink"],
+      shotType: "close-up",
+      cameraMotion: "likely handheld",
+    },
+    interpretation: {
+      mood: ["playful", "energetic"],
+      atmosphere: ["neon", "intimate"],
+      sceneInterpretation: "people posing under night signage",
+      uncertainty: ["relationship among the people is not visible"],
+    },
+    creative: {
+      editingUses: ["nightlife montage", "memory moment"],
+    },
   }),
-  p(108, "DJI_0341.MP4", 18000, {
+  demoClip(108, "DJI_0341.MP4", 18000, {
     description:
-      "A slow aerial reveal of a coastal town disappearing into dusk.",
-    subjects: ["coast", "town"],
-    setting: "coast",
-    time: "dusk",
-    lighting: ["blue hour", "soft"],
-    colors: ["blue", "slate"],
-    mood: ["expansive", "calm"],
-    shotType: "wide",
-    cameraMotion: "aerial reveal",
-    possibleUses: ["establishing shot", "closing"],
+      "A high wide view of a coastal town disappearing into dusk.",
+    observed: {
+      visibleFacts: ["coast", "town", "open sky"],
+      subjects: ["coast", "town"],
+      actions: ["looking over a town"],
+      setting: "coast",
+      weather: [],
+      environmentType: "outdoor",
+      socialContext: "no people visible",
+      activityLevel: "still",
+      visualDensity: "balanced",
+      spatialRelationships: ["town below a wide dusk sky"],
+      time: "dusk",
+      lighting: ["blue hour", "soft"],
+      colors: ["blue", "slate"],
+      shotType: "wide",
+      cameraMotion: "likely moving",
+    },
+    interpretation: {
+      mood: ["expansive"],
+      atmosphere: ["open", "cool"],
+      sceneInterpretation: "a coastal town at the end of the day",
+      uncertainty: ["whether the camera is aerial is not confirmed from still frames"],
+    },
+    creative: {
+      editingUses: ["establishing shot", "closing"],
+    },
   }),
 ];
 
@@ -441,6 +578,29 @@ export function buildSearchDocument(clip: FootageClip): SearchDocument {
     creative: {
       editingUses: clip.possibleUses,
     },
+  };
+}
+
+export function clipAskPayload(clip: FootageClip) {
+  const durationSeconds = Math.round(clip.durationMs / 100) / 10;
+  if (clip.metadataJson) {
+    return {
+      fileName: clip.fileName,
+      durationSeconds,
+      description: clip.metadataJson.description,
+      observed: clip.metadataJson.observed,
+      interpretation: clip.metadataJson.interpretation,
+      creative: clip.metadataJson.creative,
+    };
+  }
+  const document = buildSearchDocument(clip);
+  return {
+    fileName: clip.fileName,
+    durationSeconds,
+    description: document.description,
+    observed: document.observed,
+    interpretation: document.interpretation,
+    creative: document.creative,
   };
 }
 
@@ -673,7 +833,7 @@ export function buildProjectSuggestions(
       matches: (document: SearchDocument) =>
         document.interpretation.mood.some(value =>
           ["quiet", "calm", "reflective", "nostalgic", "lonely"].includes(value)
-        ) || document.observed.cameraMotion === "static",
+        ) || /\bstatic\b/.test(document.observed.cameraMotion),
     },
     {
       id: "human-moments",

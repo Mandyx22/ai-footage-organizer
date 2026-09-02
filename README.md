@@ -28,7 +28,7 @@ flowchart LR
   C --> D[Multimodal LLM]
   D --> E[Structured clip metadata]
   E --> F[(Database)]
-  A --> G[Authenticated upload endpoint]
+  A --> G[Upload endpoint]
   G --> H[(Object storage)]
   F --> I[Library · filters · retrieval]
   F --> J[Similarity · projects]
@@ -38,7 +38,7 @@ flowchart LR
   N --> O[Local search · similarity · planning]
 ```
 
-The system stores video bytes in object storage and keeps only storage keys, URLs, metadata, and collection relationships in the database. Model credentials remain server-side; browser code never receives a model key.
+The system stores video bytes in object storage and keeps only storage keys, URLs, metadata, and project membership in the database. Model credentials remain server-side; browser code never receives a model key.
 
 ## Local development
 
