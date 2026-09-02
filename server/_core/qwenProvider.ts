@@ -1,14 +1,16 @@
 import { ENV } from "./env";
 import type { FrameAnalysisInput, FrameAnalysisProvider } from "./frameAnalysisProvider";
+import {
+  buildFrameAnalysisUserContent,
+  chatCompletionContentToText,
+} from "./frameAnalysisMessages";
 
 const DEFAULT_QWEN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 const CHAT_COMPLETIONS_PATH = "/chat/completions";
 
-type QwenMessageContent = string | Array<{ type?: string; text?: string }>;
-
 type QwenChoice = {
   message?: {
-    content?: QwenMessageContent;
+    content?: Parameters<typeof chatCompletionContentToText>[0];
   };
 };
 
@@ -35,17 +37,6 @@ function assertQwenApiKey() {
   }
 }
 
-function contentToText(content: QwenMessageContent | undefined) {
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
-      .map(part => part.type === "text" && part.text ? part.text : "")
-      .join("")
-      .trim();
-  }
-  return "";
-}
-
 export const qwenFrameAnalysisProvider: FrameAnalysisProvider = {
   async analyzeFrames(input: FrameAnalysisInput) {
     assertQwenApiKey();
@@ -62,13 +53,10 @@ export const qwenFrameAnalysisProvider: FrameAnalysisProvider = {
           { role: "system", content: input.systemPrompt },
           {
             role: "user",
-            content: [
-              { type: "text", text: `Analyze these ${input.previewDataUrls.length} sampled frames from ${input.fileName}. They are ordered from earlier to later in the clip.` },
-              ...input.previewDataUrls.flatMap((url, index) => [
-                { type: "text" as const, text: `Frame ${index + 1} of ${input.previewDataUrls.length}` },
-                { type: "image_url" as const, image_url: { url } },
-              ]),
-            ],
+            content: buildFrameAnalysisUserContent(
+              input.fileName,
+              input.previewDataUrls
+            ),
           },
         ],
         response_format: {
@@ -87,7 +75,9 @@ export const qwenFrameAnalysisProvider: FrameAnalysisProvider = {
     }
 
     const result = (await response.json()) as QwenCompletion;
-    const content = contentToText(result.choices?.[0]?.message?.content);
+    const content = chatCompletionContentToText(
+      result.choices?.[0]?.message?.content
+    );
     if (!content) {
       throw new Error("Qwen frame analysis returned no metadata");
     }

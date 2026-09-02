@@ -2,6 +2,10 @@ export const ENV = {
   databaseUrl: process.env.DATABASE_URL ?? "",
   isProduction: process.env.NODE_ENV === "production",
   openAiApiKey: process.env.OPENAI_API_KEY ?? "",
+  /** Frame analysis provider: openai | qwen (default qwen). */
+  frameAnalysisProvider: process.env.FRAME_ANALYSIS_PROVIDER ?? "qwen",
+  /** OpenAI vision model for frame analysis when FRAME_ANALYSIS_PROVIDER=openai. */
+  openAiFrameAnalysisModel: process.env.OPENAI_FRAME_ANALYSIS_MODEL ?? "",
   qwenApiKey: process.env.DASHSCOPE_API_KEY ?? "",
   qwenBaseUrl: process.env.QWEN_BASE_URL ?? "",
   qwenModel: process.env.QWEN_MODEL ?? "qwen3.7-plus",
