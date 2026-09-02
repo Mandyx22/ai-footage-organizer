@@ -108,6 +108,20 @@ describe("footage retrieval", () => {
     expect(results[0]?.reasons).toContain("mood: quiet");
   });
 
+  it("keeps A0 lexical ranking ASCII-only: a pure Chinese query does not score clips", () => {
+    const results = rankFootage(
+      DEMO_CLIPS,
+      "找一些让我感觉有点孤独但又很温暖的镜头"
+    );
+    expect(results).toHaveLength(DEMO_CLIPS.length);
+    expect(results.map(result => result.clip.id)).toEqual(
+      DEMO_CLIPS.map(clip => clip.id)
+    );
+    expect(
+      results.every(result => result.score === 0 && result.reasons.length === 0)
+    ).toBe(true);
+  });
+
   it("ranks similar colour footage when asked for a colour match", () => {
     const results = rankSimilar(DEMO_CLIPS, 101, "color");
     expect(results[0]?.clip.colors).toContain("blue");
