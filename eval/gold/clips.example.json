@@ -1,5 +1,5 @@
 {
-  "version": "m5a-harness-v1",
+  "version": "m5a-harness-v2",
   "purpose": "Demo and synthetic Metadata V2 snapshots for the M5A eval harness. Not a retrieval-quality corpus.",
   "clips": [
     {

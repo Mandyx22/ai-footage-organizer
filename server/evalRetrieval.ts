@@ -5,11 +5,14 @@ import {
 import { rankByCosine } from "./cosine";
 import { rankFootageA1 } from "./evalLexical";
 import {
-  EVAL_QUERY_CATEGORIES,
+  EVAL_LANGUAGE_SLICES,
+  EVAL_SEMANTIC_CATEGORIES,
+  languageSliceFor,
   loadExampleEvalGold,
   type EvalClip,
   type EvalGoldSet,
-  type EvalQueryCategory,
+  type EvalLanguageSlice,
+  type EvalSemanticCategory,
 } from "./evalGold";
 import {
   meanMetricSet,
@@ -69,8 +72,10 @@ export type SystemMetrics = {
 export type QueryEvalResult = {
   queryId: string;
   text: string;
-  language: string;
-  categories: EvalQueryCategory[];
+  queryLanguage: string;
+  languageRelation: string;
+  languageSlice: EvalLanguageSlice | null;
+  semanticCategories: EvalSemanticCategory[];
   A0: { ranking: LexicalRankedHit[]; metrics: MetricSet };
   A1: { ranking: LexicalRankedHit[]; metrics: MetricSet };
   B0: { ranking: SemanticRankedHit[]; metrics: MetricSet };
@@ -92,7 +97,8 @@ export type OfflineEvalReport = {
   clipCount: number;
   queryCount: number;
   overall: SystemMetrics;
-  byCategory: Record<EvalQueryCategory, SystemMetrics>;
+  byLanguageSlice: Record<EvalLanguageSlice, SystemMetrics>;
+  bySemanticCategory: Record<EvalSemanticCategory, SystemMetrics>;
   queries: QueryEvalResult[];
 };
 
@@ -220,8 +226,10 @@ export async function runOfflineRetrievalEval(options: {
     queries.push({
       queryId: query.id,
       text: query.text,
-      language: query.language,
-      categories: query.categories,
+      queryLanguage: query.queryLanguage,
+      languageRelation: query.languageRelation,
+      languageSlice: languageSliceFor(query),
+      semanticCategories: query.semanticCategories,
       A0: {
         ranking: a0,
         metrics: metricsFromIds(
@@ -260,14 +268,21 @@ export async function runOfflineRetrievalEval(options: {
     });
   }
 
-  const byCategory = Object.fromEntries(
-    EVAL_QUERY_CATEGORIES.map(category => {
-      const slice = queries.filter(query =>
-        query.categories.includes(category)
-      );
-      return [category, meanSystems(slice)];
+  const byLanguageSlice = Object.fromEntries(
+    EVAL_LANGUAGE_SLICES.map(slice => {
+      const selected = queries.filter(query => query.languageSlice === slice);
+      return [slice, meanSystems(selected)];
     })
-  ) as OfflineEvalReport["byCategory"];
+  ) as OfflineEvalReport["byLanguageSlice"];
+
+  const bySemanticCategory = Object.fromEntries(
+    EVAL_SEMANTIC_CATEGORIES.map(category => {
+      const selected = queries.filter(query =>
+        query.semanticCategories.includes(category)
+      );
+      return [category, meanSystems(selected)];
+    })
+  ) as OfflineEvalReport["bySemanticCategory"];
 
   return {
     disclaimer,
@@ -283,7 +298,8 @@ export async function runOfflineRetrievalEval(options: {
     clipCount: gold.clips.length,
     queryCount: gold.queries.length,
     overall: meanSystems(queries),
-    byCategory,
+    byLanguageSlice,
+    bySemanticCategory,
     queries,
   };
 }
@@ -318,22 +334,35 @@ export function formatEvalReport(report: OfflineEvalReport): string {
     `  C0 A0 + embedding RRF                   ${formatMetricSet(report.overall.C0)}`,
     `  C1 A1 + embedding RRF                   ${formatMetricSet(report.overall.C1)}`,
     "",
-    `By category (${wiringOnly})`,
+    `By language slice (${wiringOnly})`,
   ];
 
-  for (const category of EVAL_QUERY_CATEGORIES) {
-    const slice = report.byCategory[category];
+  for (const slice of EVAL_LANGUAGE_SLICES) {
+    const metrics = report.byLanguageSlice[slice];
+    lines.push(`  ${slice}`);
+    lines.push(`    A0  ${formatMetricSet(metrics.A0)}`);
+    lines.push(`    A1  ${formatMetricSet(metrics.A1)}`);
+    lines.push(`    B0  ${formatMetricSet(metrics.B0)}`);
+    lines.push(`    C0  ${formatMetricSet(metrics.C0)}`);
+    lines.push(`    C1  ${formatMetricSet(metrics.C1)}`);
+  }
+
+  lines.push("", `By semantic category (${wiringOnly})`);
+  for (const category of EVAL_SEMANTIC_CATEGORIES) {
+    const metrics = report.bySemanticCategory[category];
     lines.push(`  ${category}`);
-    lines.push(`    A0  ${formatMetricSet(slice.A0)}`);
-    lines.push(`    A1  ${formatMetricSet(slice.A1)}`);
-    lines.push(`    B0  ${formatMetricSet(slice.B0)}`);
-    lines.push(`    C0  ${formatMetricSet(slice.C0)}`);
-    lines.push(`    C1  ${formatMetricSet(slice.C1)}`);
+    lines.push(`    A0  ${formatMetricSet(metrics.A0)}`);
+    lines.push(`    A1  ${formatMetricSet(metrics.A1)}`);
+    lines.push(`    B0  ${formatMetricSet(metrics.B0)}`);
+    lines.push(`    C0  ${formatMetricSet(metrics.C0)}`);
+    lines.push(`    C1  ${formatMetricSet(metrics.C1)}`);
   }
 
   lines.push("", `Per query (top 5; ${wiringOnly})`);
   for (const query of report.queries) {
-    lines.push(`  [${query.queryId}] ${query.text}`);
+    lines.push(
+      `  [${query.queryId}] ${query.text}  lang=${query.queryLanguage} relation=${query.languageRelation} slice=${query.languageSlice ?? "none"}`
+    );
     lines.push(
       `    A0  ${formatMetricSet(query.A0.metrics)}  hits=${formatHits(
         query.A0.ranking.slice(0, 5).map(hit => hit.clipId)

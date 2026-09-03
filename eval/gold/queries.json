@@ -1,12 +1,13 @@
 {
-  "version": "m5a-harness-v1",
+  "version": "m5a-harness-v2",
   "purpose": "Harness fixtures for M5A wiring. Judgments are illustrative only. This is not a retrieval-quality gold set. Do not use this set to claim semantic lift or to choose a production embedding model.",
   "queries": [
     {
       "id": "q-quiet-blue-night",
       "text": "quiet blue night shots",
-      "language": "en",
-      "categories": ["exact-factual", "atmosphere", "english"],
+      "queryLanguage": "en",
+      "languageRelation": "same-language",
+      "semanticCategories": ["exact-factual", "atmosphere"],
       "judgments": [
         { "clipId": "demo-104", "grade": 3 },
         { "clipId": "demo-101", "grade": 2 },
@@ -17,13 +18,9 @@
     {
       "id": "q-lonely-warm-zh",
       "text": "找一些让我感觉有点孤独但又很温暖的镜头",
-      "language": "zh",
-      "categories": [
-        "subjective-mood",
-        "chinese",
-        "cross-lingual",
-        "zero-lexical-overlap"
-      ],
+      "queryLanguage": "zh",
+      "languageRelation": "cross-lingual",
+      "semanticCategories": ["subjective-mood", "zero-lexical-overlap"],
       "judgments": [
         { "clipId": "syn-lonely-warm-lakeside", "grade": 3 },
         { "clipId": "demo-102", "grade": 2 },
@@ -34,8 +31,9 @@
     {
       "id": "q-summer-memory-montage",
       "text": "适合做一个安静夏日回忆 montage 的素材",
-      "language": "mixed",
-      "categories": ["editing-intent", "chinese", "mixed", "cross-lingual"],
+      "queryLanguage": "mixed",
+      "languageRelation": "cross-lingual",
+      "semanticCategories": ["editing-intent"],
       "judgments": [
         { "clipId": "syn-summer-memory-porch", "grade": 3 },
         { "clipId": "syn-lonely-warm-lakeside", "grade": 2 },
@@ -46,8 +44,9 @@
     {
       "id": "q-open-reflective",
       "text": "something open and reflective",
-      "language": "en",
-      "categories": ["subjective-mood", "atmosphere", "english"],
+      "queryLanguage": "en",
+      "languageRelation": "same-language",
+      "semanticCategories": ["subjective-mood", "atmosphere"],
       "judgments": [
         { "clipId": "demo-108", "grade": 3 },
         { "clipId": "demo-102", "grade": 2 },
@@ -58,8 +57,9 @@
     {
       "id": "q-two-people-night-street",
       "text": "two people on a night street",
-      "language": "en",
-      "categories": ["exact-factual", "english"],
+      "queryLanguage": "en",
+      "languageRelation": "same-language",
+      "semanticCategories": ["exact-factual"],
       "judgments": [
         { "clipId": "demo-101", "grade": 3 },
         { "clipId": "demo-107", "grade": 2 },
@@ -69,12 +69,11 @@
     {
       "id": "q-rainy-empty-zh",
       "text": "没有人的雨夜街道",
-      "language": "zh",
-      "categories": [
+      "queryLanguage": "zh",
+      "languageRelation": "cross-lingual",
+      "semanticCategories": [
         "exact-factual",
         "negative-compositional",
-        "chinese",
-        "cross-lingual",
         "zero-lexical-overlap"
       ],
       "judgments": [
@@ -86,8 +85,9 @@
     {
       "id": "q-closing-wide",
       "text": "a slow wide shot that could close a film",
-      "language": "en",
-      "categories": ["editing-intent", "english"],
+      "queryLanguage": "en",
+      "languageRelation": "same-language",
+      "semanticCategories": ["editing-intent"],
       "judgments": [
         { "clipId": "demo-108", "grade": 3 },
         { "clipId": "syn-lonely-warm-lakeside", "grade": 2 },
@@ -97,8 +97,9 @@
     {
       "id": "q-summer-memory-zh",
       "text": "适合做安静夏日回忆的素材",
-      "language": "zh",
-      "categories": ["editing-intent", "chinese"],
+      "queryLanguage": "zh",
+      "languageRelation": "same-language",
+      "semanticCategories": ["editing-intent"],
       "judgments": [
         { "clipId": "syn-quiet-summer-zh", "grade": 3 },
         { "clipId": "syn-summer-memory-porch", "grade": 2 },

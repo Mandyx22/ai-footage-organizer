@@ -59,7 +59,8 @@ describe("offline retrieval eval harness", () => {
     const montage = first.queries.find(
       query => query.queryId === "q-summer-memory-montage"
     );
-    expect(montage?.categories).toContain("mixed");
+    expect(montage?.queryLanguage).toBe("mixed");
+    expect(montage?.languageSlice).toBe("mixed-language");
     expect(montage?.A0.ranking.some(hit => hit.score > 0)).toBe(true);
 
     const quietBlue = first.queries.find(
@@ -77,17 +78,25 @@ describe("offline retrieval eval harness", () => {
     ).toEqual(
       second.queries.map(query => query.B0.ranking.map(hit => hit.clipId))
     );
-    expect(Object.keys(first.byCategory)).toEqual(
-      expect.arrayContaining([
-        "exact-factual",
-        "subjective-mood",
-        "editing-intent",
-        "chinese",
-        "mixed",
-        "cross-lingual",
-        "zero-lexical-overlap",
-      ])
-    );
+    expect(Object.keys(first.byLanguageSlice)).toEqual([
+      "english-same-language",
+      "chinese-same-language",
+      "chinese-cross-lingual",
+      "mixed-language",
+    ]);
+    expect(Object.keys(first.bySemanticCategory)).toEqual([
+      "exact-factual",
+      "subjective-mood",
+      "atmosphere",
+      "editing-intent",
+      "zero-lexical-overlap",
+      "negative-compositional",
+    ]);
+    expect(formatted).toContain("By language slice");
+    expect(formatted).toContain("By semantic category");
+    expect(formatted).not.toMatch(/\nBy category \(/);
+    expect(first.byLanguageSlice["english-same-language"]).toBeTruthy();
+    expect(first.bySemanticCategory["subjective-mood"]).toBeTruthy();
   });
 
   it("refuses Qwen in this harness batch without falling back", async () => {

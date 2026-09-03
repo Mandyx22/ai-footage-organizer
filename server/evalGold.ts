@@ -13,7 +13,7 @@ import {
   type VisualDensity,
 } from "./footage";
 
-export const EVAL_GOLD_VERSION = "m5a-harness-v1" as const;
+export const EVAL_GOLD_VERSION = "m5a-harness-v2" as const;
 
 export const REQUIRED_EVAL_QUERY_TEXTS = [
   "quiet blue night shots",
@@ -22,15 +22,11 @@ export const REQUIRED_EVAL_QUERY_TEXTS = [
   "something open and reflective",
 ] as const;
 
-export const EVAL_QUERY_CATEGORIES = [
+export const EVAL_SEMANTIC_CATEGORIES = [
   "exact-factual",
   "subjective-mood",
   "atmosphere",
   "editing-intent",
-  "chinese",
-  "english",
-  "mixed",
-  "cross-lingual",
   "zero-lexical-overlap",
   "negative-compositional",
 ] as const;
@@ -39,9 +35,23 @@ export const EVAL_CLIP_SOURCES = ["demo", "synthetic"] as const;
 
 export const EVAL_QUERY_LANGUAGES = ["en", "zh", "mixed"] as const;
 
-export type EvalQueryCategory = (typeof EVAL_QUERY_CATEGORIES)[number];
+export const EVAL_LANGUAGE_RELATIONS = [
+  "same-language",
+  "cross-lingual",
+] as const;
+
+export const EVAL_LANGUAGE_SLICES = [
+  "english-same-language",
+  "chinese-same-language",
+  "chinese-cross-lingual",
+  "mixed-language",
+] as const;
+
+export type EvalSemanticCategory = (typeof EVAL_SEMANTIC_CATEGORIES)[number];
 export type EvalClipSource = (typeof EVAL_CLIP_SOURCES)[number];
 export type EvalQueryLanguage = (typeof EVAL_QUERY_LANGUAGES)[number];
+export type EvalLanguageRelation = (typeof EVAL_LANGUAGE_RELATIONS)[number];
+export type EvalLanguageSlice = (typeof EVAL_LANGUAGE_SLICES)[number];
 export type RelevanceGrade = 0 | 1 | 2 | 3;
 
 export type EvalClip = {
@@ -58,8 +68,9 @@ export type EvalJudgment = {
 export type EvalQuery = {
   id: string;
   text: string;
-  language: EvalQueryLanguage;
-  categories: EvalQueryCategory[];
+  queryLanguage: EvalQueryLanguage;
+  languageRelation: EvalLanguageRelation;
+  semanticCategories: EvalSemanticCategory[];
   judgments: EvalJudgment[];
 };
 
@@ -69,6 +80,31 @@ export type EvalGoldSet = {
   clips: EvalClip[];
   queries: EvalQuery[];
 };
+
+export function languageSliceFor(
+  query: Pick<EvalQuery, "queryLanguage" | "languageRelation">
+): EvalLanguageSlice | null {
+  if (query.queryLanguage === "mixed") return "mixed-language";
+  if (
+    query.queryLanguage === "en" &&
+    query.languageRelation === "same-language"
+  ) {
+    return "english-same-language";
+  }
+  if (
+    query.queryLanguage === "zh" &&
+    query.languageRelation === "same-language"
+  ) {
+    return "chinese-same-language";
+  }
+  if (
+    query.queryLanguage === "zh" &&
+    query.languageRelation === "cross-lingual"
+  ) {
+    return "chinese-cross-lingual";
+  }
+  return null;
+}
 
 const GOLD_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -241,23 +277,36 @@ function parseQuery(value: unknown, index: number): EvalQuery {
   );
   const query = value as Record<string, unknown>;
   assert(
-    Array.isArray(query.categories),
-    `${path}.categories must be an array`
+    Array.isArray(query.semanticCategories),
+    `${path}.semanticCategories must be an array`
   );
   assert(Array.isArray(query.judgments), `${path}.judgments must be an array`);
-  const categories = query.categories.map((category, categoryIndex) =>
-    isOneOf(
-      category,
-      EVAL_QUERY_CATEGORIES,
-      `${path}.categories[${categoryIndex}]`
-    )
+  const semanticCategories = query.semanticCategories.map(
+    (category, categoryIndex) =>
+      isOneOf(
+        category,
+        EVAL_SEMANTIC_CATEGORIES,
+        `${path}.semanticCategories[${categoryIndex}]`
+      )
   );
-  assert(categories.length > 0, `${path}.categories must not be empty`);
+  assert(
+    semanticCategories.length > 0,
+    `${path}.semanticCategories must not be empty`
+  );
   return {
     id: asString(query.id, `${path}.id`),
     text: asString(query.text, `${path}.text`),
-    language: isOneOf(query.language, EVAL_QUERY_LANGUAGES, `${path}.language`),
-    categories,
+    queryLanguage: isOneOf(
+      query.queryLanguage,
+      EVAL_QUERY_LANGUAGES,
+      `${path}.queryLanguage`
+    ),
+    languageRelation: isOneOf(
+      query.languageRelation,
+      EVAL_LANGUAGE_RELATIONS,
+      `${path}.languageRelation`
+    ),
+    semanticCategories,
     judgments: query.judgments.map((judgment, judgmentIndex) =>
       parseJudgment(judgment, `${path}.judgments[${judgmentIndex}]`)
     ),
@@ -284,11 +333,11 @@ export function parseEvalGold(
   const queriesFile = queriesJson as Record<string, unknown>;
   assert(
     clipsFile.version === EVAL_GOLD_VERSION,
-    "clips.version must be m5a-harness-v1"
+    `clips.version must be ${EVAL_GOLD_VERSION}`
   );
   assert(
     queriesFile.version === EVAL_GOLD_VERSION,
-    "queries.version must be m5a-harness-v1"
+    `queries.version must be ${EVAL_GOLD_VERSION}`
   );
   assert(Array.isArray(clipsFile.clips), "clips.clips must be an array");
   assert(
