@@ -4,8 +4,6 @@ import { assertDenseVector, type EmbeddingProvider } from "./embeddingProvider";
 export const QWEN_EMBEDDING_PROVIDER_ID = "qwen";
 export const QWEN_EMBEDDING_MODEL = "text-embedding-v4";
 export const QWEN_EMBEDDING_DIMENSION = 1024;
-export const QWEN_REAL_SMOKE_STATUS =
-  "blocked by credential type — existing key is Token Plan sk-sp";
 const QWEN_EMBEDDING_BATCH_SIZE = 10;
 export const QWEN_EMBEDDING_DEFAULT_URL =
   "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding";

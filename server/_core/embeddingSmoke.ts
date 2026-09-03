@@ -14,7 +14,6 @@ import {
 import {
   QWEN_EMBEDDING_DEFAULT_URL,
   QWEN_EMBEDDING_MODEL,
-  QWEN_REAL_SMOKE_STATUS,
 } from "./qwenEmbeddingProvider";
 
 function inspectVector(
@@ -77,7 +76,9 @@ async function main() {
   console.log("\n=== Qwen text-embedding-v4 ===");
   console.log(`intended endpoint: ${QWEN_EMBEDDING_DEFAULT_URL}`);
   console.log(`intended model: ${QWEN_EMBEDDING_MODEL}`);
-  console.log(`Qwen real smoke: ${QWEN_REAL_SMOKE_STATUS}`);
+  console.log(
+    "Qwen real smoke skipped: blocked by credential type — existing key is Token Plan sk-sp"
+  );
   console.log(
     "No Qwen request sent. No endpoint, model, or provider fallback."
   );

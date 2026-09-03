@@ -98,9 +98,7 @@ describe("offline retrieval eval harness", () => {
         gold,
         provider: { ...provider, id: "qwen" },
       })
-    ).rejects.toThrow(
-      /blocked by credential type — existing key is Token Plan sk-sp/
-    );
+    ).rejects.toThrow("Qwen is not enabled for this real-vector harness batch");
     await expect(
       runOfflineRetrievalEval({
         gold,

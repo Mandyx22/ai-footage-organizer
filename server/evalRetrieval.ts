@@ -31,10 +31,7 @@ import {
   OPENAI_EMBEDDING_NATIVE_DIMENSION,
   OPENAI_EMBEDDING_PROVIDER_ID,
 } from "./_core/openaiEmbeddingProvider";
-import {
-  QWEN_EMBEDDING_PROVIDER_ID,
-  QWEN_REAL_SMOKE_STATUS,
-} from "./_core/qwenEmbeddingProvider";
+import { QWEN_EMBEDDING_PROVIDER_ID } from "./_core/qwenEmbeddingProvider";
 
 export const HARNESS_NOTE =
   "Metrics validate the harness pipeline. They are not retrieval-quality evidence.";
@@ -109,9 +106,7 @@ function assertHarnessProvider(provider: EmbeddingProvider) {
     return "openai" as const;
   }
   if (provider.id === QWEN_EMBEDDING_PROVIDER_ID) {
-    throw new Error(
-      `Qwen real-vector harness is ${QWEN_REAL_SMOKE_STATUS}. No endpoint, model, or provider fallback.`
-    );
+    throw new Error("Qwen is not enabled for this real-vector harness batch");
   }
   throw new Error(
     "This M5A harness batch only runs the fake EmbeddingProvider or OpenAI text-embedding-3-large native 3072"

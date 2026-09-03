@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   QWEN_EMBEDDING_DEFAULT_URL,
   QWEN_EMBEDDING_DIMENSION,
-  QWEN_REAL_SMOKE_STATUS,
   resolveQwenEmbeddingUrl,
 } from "./qwenEmbeddingProvider";
 
@@ -42,11 +41,6 @@ function embeddingResponse(vectors: number[][]) {
 }
 
 describe("resolveQwenEmbeddingUrl", () => {
-  it("records Qwen real smoke as blocked on Token Plan credentials", () => {
-    expect(QWEN_REAL_SMOKE_STATUS).toBe(
-      "blocked by credential type — existing key is Token Plan sk-sp"
-    );
-  });
   it("uses the China DashScope native embedding endpoint locally", () => {
     expect(resolveQwenEmbeddingUrl("", false)).toBe(QWEN_EMBEDDING_DEFAULT_URL);
   });
