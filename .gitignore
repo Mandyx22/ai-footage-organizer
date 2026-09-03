@@ -112,3 +112,8 @@ temp/
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json
 .project-config.json
+
+# M5A offline eval artifacts (local gold, vectors, reports)
+eval/gold/clips.local.json
+eval/vectors/
+eval/results/

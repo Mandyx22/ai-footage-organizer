@@ -1,0 +1,419 @@
+{
+  "version": "m5a-harness-v2",
+  "purpose": "Demo and synthetic Metadata V2 snapshots for the M5A eval harness. Not a retrieval-quality corpus.",
+  "clips": [
+    {
+      "id": "demo-101",
+      "source": "demo",
+      "metadataV2": {
+        "description": "Two people crossing a cobalt-blue side street under neon signs.",
+        "observed": {
+          "visibleFacts": ["two people", "shop signs", "side street"],
+          "subjects": ["people"],
+          "actions": ["crossing a street"],
+          "setting": "city street",
+          "weather": [],
+          "environmentType": "outdoor",
+          "socialContext": "pair",
+          "activityLevel": "moderate activity",
+          "visualDensity": "busy",
+          "spatialRelationships": ["two people under signs in a medium frame"],
+          "time": "night",
+          "lighting": ["neon", "low light"],
+          "colors": ["blue", "magenta"],
+          "shotType": "medium",
+          "cameraMotion": "likely tracking"
+        },
+        "interpretation": {
+          "mood": ["dreamy", "energetic"],
+          "atmosphere": ["neon", "urban"],
+          "sceneInterpretation": "a night walk on a lit commercial street",
+          "uncertainty": ["camera motion inferred from still frames"]
+        },
+        "creative": {
+          "editingUses": ["nightlife montage", "transition"]
+        }
+      }
+    },
+    {
+      "id": "demo-102",
+      "source": "demo",
+      "metadataV2": {
+        "description": "A quiet wide view of warm light falling through a station window.",
+        "observed": {
+          "visibleFacts": ["train window", "warm light", "empty seats"],
+          "subjects": ["train", "window"],
+          "actions": ["sitting still"],
+          "setting": "train interior",
+          "weather": [],
+          "environmentType": "indoor",
+          "socialContext": "no people visible",
+          "activityLevel": "still",
+          "visualDensity": "sparse",
+          "spatialRelationships": ["wide interior with light at the window"],
+          "time": "sunset",
+          "lighting": ["golden hour", "soft"],
+          "colors": ["amber", "cream"],
+          "shotType": "wide",
+          "cameraMotion": "likely static"
+        },
+        "interpretation": {
+          "mood": ["reflective", "calm"],
+          "atmosphere": ["warm", "still"],
+          "sceneInterpretation": "a pause during travel at sunset",
+          "uncertainty": ["exact station location is not visible"]
+        },
+        "creative": {
+          "editingUses": ["opening", "day-to-night transition"]
+        }
+      }
+    },
+    {
+      "id": "demo-103",
+      "source": "demo",
+      "metadataV2": {
+        "description": "Steam rises from ramen bowls as people laugh across a wooden table.",
+        "observed": {
+          "visibleFacts": ["ramen bowls", "steam", "wooden table", "people"],
+          "subjects": ["food", "people"],
+          "actions": ["eating at a table"],
+          "setting": "restaurant",
+          "weather": [],
+          "environmentType": "indoor",
+          "socialContext": "small group",
+          "activityLevel": "low activity",
+          "visualDensity": "balanced",
+          "spatialRelationships": [
+            "bowls in the foreground with people across the table"
+          ],
+          "time": "night",
+          "lighting": ["warm practical", "low light"],
+          "colors": ["amber", "red"],
+          "shotType": "close-up",
+          "cameraMotion": "likely handheld"
+        },
+        "interpretation": {
+          "mood": ["intimate", "lively"],
+          "atmosphere": ["warm", "close"],
+          "sceneInterpretation": "a shared meal in a small restaurant",
+          "uncertainty": ["number of people beyond the table edge is unclear"]
+        },
+        "creative": {
+          "editingUses": ["food montage", "detail cutaway"]
+        }
+      }
+    },
+    {
+      "id": "demo-104",
+      "source": "demo",
+      "metadataV2": {
+        "description": "Rain traces luminous reflections across an almost empty city intersection.",
+        "observed": {
+          "visibleFacts": [
+            "rain",
+            "wet street",
+            "reflections",
+            "empty intersection"
+          ],
+          "subjects": ["street", "rain"],
+          "actions": ["rain falling"],
+          "setting": "city street",
+          "weather": ["rainy"],
+          "environmentType": "outdoor",
+          "socialContext": "no people visible",
+          "activityLevel": "still",
+          "visualDensity": "sparse",
+          "spatialRelationships": [
+            "wide empty intersection with reflected lights"
+          ],
+          "time": "night",
+          "lighting": ["neon", "low light"],
+          "colors": ["blue", "violet"],
+          "shotType": "wide",
+          "cameraMotion": "likely static"
+        },
+        "interpretation": {
+          "mood": ["quiet", "lonely"],
+          "atmosphere": ["wet", "hazy"],
+          "sceneInterpretation": "a paused city after rain",
+          "uncertainty": ["camera motion inferred from still frames"]
+        },
+        "creative": {
+          "editingUses": ["reflective opening", "transition"]
+        }
+      }
+    },
+    {
+      "id": "demo-105",
+      "source": "demo",
+      "metadataV2": {
+        "description": "A sunlit cyclist moves through a tree-lined path in the morning.",
+        "observed": {
+          "visibleFacts": ["cyclist", "trees", "path"],
+          "subjects": ["cyclist", "nature"],
+          "actions": ["riding a bicycle"],
+          "setting": "park",
+          "weather": ["sunny"],
+          "environmentType": "outdoor",
+          "socialContext": "alone",
+          "activityLevel": "active",
+          "visualDensity": "balanced",
+          "spatialRelationships": ["cyclist moving through a tree-lined path"],
+          "time": "morning",
+          "lighting": ["daylight", "dappled"],
+          "colors": ["green", "warm yellow"],
+          "shotType": "medium",
+          "cameraMotion": "likely moving"
+        },
+        "interpretation": {
+          "mood": ["free", "optimistic"],
+          "atmosphere": ["airy", "bright"],
+          "sceneInterpretation": "a morning ride through a park",
+          "uncertainty": ["exact park location is not visible"]
+        },
+        "creative": {
+          "editingUses": ["travel montage", "pace lift"]
+        }
+      }
+    },
+    {
+      "id": "demo-106",
+      "source": "demo",
+      "metadataV2": {
+        "description": "Hands turn the pages of a small book beside a window.",
+        "observed": {
+          "visibleFacts": ["hands", "book", "window"],
+          "subjects": ["hands", "book"],
+          "actions": ["turning pages"],
+          "setting": "room by a window",
+          "weather": [],
+          "environmentType": "indoor",
+          "socialContext": "alone",
+          "activityLevel": "low activity",
+          "visualDensity": "minimal",
+          "spatialRelationships": [
+            "hands and book in close-up beside a window"
+          ],
+          "time": "afternoon",
+          "lighting": ["soft window light"],
+          "colors": ["cream", "brown"],
+          "shotType": "close-up",
+          "cameraMotion": "likely static"
+        },
+        "interpretation": {
+          "mood": ["quiet", "nostalgic"],
+          "atmosphere": ["soft", "still"],
+          "sceneInterpretation": "a quiet indoor pause",
+          "uncertainty": ["the exact kind of room is not labeled in the frames"]
+        },
+        "creative": {
+          "editingUses": ["breathing room", "detail cutaway"]
+        }
+      }
+    },
+    {
+      "id": "demo-107",
+      "source": "demo",
+      "metadataV2": {
+        "description": "People lean into the frame beneath a glowing shop sign.",
+        "observed": {
+          "visibleFacts": ["people", "shop sign", "close faces"],
+          "subjects": ["people"],
+          "actions": ["leaning into frame"],
+          "setting": "city street",
+          "weather": [],
+          "environmentType": "outdoor",
+          "socialContext": "small group",
+          "activityLevel": "low activity",
+          "visualDensity": "balanced",
+          "spatialRelationships": ["faces close to camera under a sign"],
+          "time": "night",
+          "lighting": ["neon", "mixed"],
+          "colors": ["blue", "pink"],
+          "shotType": "close-up",
+          "cameraMotion": "likely handheld"
+        },
+        "interpretation": {
+          "mood": ["playful", "energetic"],
+          "atmosphere": ["neon", "intimate"],
+          "sceneInterpretation": "people posing under night signage",
+          "uncertainty": ["relationship among the people is not visible"]
+        },
+        "creative": {
+          "editingUses": ["nightlife montage", "memory moment"]
+        }
+      }
+    },
+    {
+      "id": "demo-108",
+      "source": "demo",
+      "metadataV2": {
+        "description": "A high wide view of a coastal town disappearing into dusk.",
+        "observed": {
+          "visibleFacts": ["coast", "town", "open sky"],
+          "subjects": ["coast", "town"],
+          "actions": ["looking over a town"],
+          "setting": "coast",
+          "weather": [],
+          "environmentType": "outdoor",
+          "socialContext": "no people visible",
+          "activityLevel": "still",
+          "visualDensity": "balanced",
+          "spatialRelationships": ["town below a wide dusk sky"],
+          "time": "dusk",
+          "lighting": ["blue hour", "soft"],
+          "colors": ["blue", "slate"],
+          "shotType": "wide",
+          "cameraMotion": "likely moving"
+        },
+        "interpretation": {
+          "mood": ["expansive"],
+          "atmosphere": ["open", "cool"],
+          "sceneInterpretation": "a coastal town at the end of the day",
+          "uncertainty": [
+            "whether the camera is aerial is not confirmed from still frames"
+          ]
+        },
+        "creative": {
+          "editingUses": ["establishing shot", "closing"]
+        }
+      }
+    },
+    {
+      "id": "syn-lonely-warm-lakeside",
+      "source": "synthetic",
+      "metadataV2": {
+        "description": "A person sits alone beside a lake at sunset.",
+        "observed": {
+          "visibleFacts": ["one person", "lake", "sunset"],
+          "subjects": ["person", "lake"],
+          "actions": ["sitting still"],
+          "setting": "lakeside",
+          "weather": [],
+          "environmentType": "outdoor",
+          "socialContext": "alone",
+          "activityLevel": "still",
+          "visualDensity": "sparse",
+          "spatialRelationships": ["one person isolated in a wide frame"],
+          "time": "sunset",
+          "lighting": ["golden hour", "soft"],
+          "colors": ["gold", "blue"],
+          "shotType": "medium-wide",
+          "cameraMotion": "likely static"
+        },
+        "interpretation": {
+          "mood": ["quiet", "reflective"],
+          "atmosphere": ["intimate", "still"],
+          "sceneInterpretation": "a solitary lakeside pause",
+          "uncertainty": ["whether this is a beach is not confirmed"]
+        },
+        "creative": {
+          "editingUses": [
+            "memory montage",
+            "reflective transition",
+            "closing moment"
+          ]
+        }
+      }
+    },
+    {
+      "id": "syn-summer-memory-porch",
+      "source": "synthetic",
+      "metadataV2": {
+        "description": "Afternoon light falls across an empty wooden porch and a glass of water.",
+        "observed": {
+          "visibleFacts": ["wooden porch", "glass of water", "afternoon light"],
+          "subjects": ["porch", "glass"],
+          "actions": ["sitting unused"],
+          "setting": "house porch",
+          "weather": ["sunny"],
+          "environmentType": "semi-outdoor",
+          "socialContext": "no people visible",
+          "activityLevel": "still",
+          "visualDensity": "minimal",
+          "spatialRelationships": ["empty porch in a wide, unhurried frame"],
+          "time": "afternoon",
+          "lighting": ["dappled", "soft"],
+          "colors": ["honey", "green"],
+          "shotType": "wide",
+          "cameraMotion": "likely static"
+        },
+        "interpretation": {
+          "mood": ["nostalgic", "calm"],
+          "atmosphere": ["hazy", "summer"],
+          "sceneInterpretation": "a still domestic pause on a warm afternoon",
+          "uncertainty": ["the season is inferred from light and foliage"]
+        },
+        "creative": {
+          "editingUses": ["memory montage", "breathing room"]
+        }
+      }
+    },
+    {
+      "id": "syn-crowded-noon-market",
+      "source": "synthetic",
+      "metadataV2": {
+        "description": "A dense outdoor market bustles under hard midday sun.",
+        "observed": {
+          "visibleFacts": ["crowd", "stalls", "overhead tarps"],
+          "subjects": ["people", "market stalls"],
+          "actions": ["walking through a market"],
+          "setting": "outdoor market",
+          "weather": ["sunny"],
+          "environmentType": "outdoor",
+          "socialContext": "crowd",
+          "activityLevel": "highly active",
+          "visualDensity": "cluttered",
+          "spatialRelationships": ["many people packed between stalls"],
+          "time": "midday",
+          "lighting": ["harsh daylight"],
+          "colors": ["red", "yellow"],
+          "shotType": "wide",
+          "cameraMotion": "likely handheld"
+        },
+        "interpretation": {
+          "mood": ["busy", "energetic"],
+          "atmosphere": ["loud", "hot"],
+          "sceneInterpretation": "a crowded market at peak hours",
+          "uncertainty": []
+        },
+        "creative": {
+          "editingUses": ["travel montage", "pace lift"]
+        }
+      }
+    },
+    {
+      "id": "syn-quiet-summer-zh",
+      "source": "synthetic",
+      "metadataV2": {
+        "description": "Afternoon light falls across an empty wooden porch.",
+        "observed": {
+          "visibleFacts": ["wooden porch", "afternoon light"],
+          "subjects": ["porch"],
+          "actions": ["sitting unused"],
+          "setting": "house porch",
+          "weather": ["sunny"],
+          "environmentType": "semi-outdoor",
+          "socialContext": "no people visible",
+          "activityLevel": "still",
+          "visualDensity": "minimal",
+          "spatialRelationships": ["empty porch in a wide, unhurried frame"],
+          "time": "afternoon",
+          "lighting": ["dappled", "soft"],
+          "colors": ["honey", "green"],
+          "shotType": "wide",
+          "cameraMotion": "likely static"
+        },
+        "interpretation": {
+          "mood": ["安静", "怀旧"],
+          "atmosphere": ["hazy", "summer"],
+          "sceneInterpretation": "a still domestic pause on a warm afternoon",
+          "uncertainty": ["the season is inferred from light and foliage"]
+        },
+        "creative": {
+          "editingUses": ["夏日回忆"]
+        }
+      }
+    }
+  ]
+}
