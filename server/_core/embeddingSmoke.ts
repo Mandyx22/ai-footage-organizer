@@ -12,10 +12,10 @@ import {
   createOpenAiEmbeddingProvider,
 } from "./openaiEmbeddingProvider";
 import {
-  createQwenEmbeddingProvider,
-  resolveQwenEmbeddingUrl,
+  QWEN_EMBEDDING_DEFAULT_URL,
+  QWEN_EMBEDDING_MODEL,
+  QWEN_REAL_SMOKE_STATUS,
 } from "./qwenEmbeddingProvider";
-import { ENV } from "./env";
 
 function inspectVector(
   label: string,
@@ -39,15 +39,12 @@ function inspectVector(
   );
 }
 
-async function smokeProvider(
-  name: string,
-  endpoint: string,
-  provider: ReturnType<typeof createQwenEmbeddingProvider>,
-  document: string,
-  query: string
-) {
-  console.log(`\n=== ${name} ===`);
-  console.log(`endpoint: ${endpoint}`);
+async function smokeOpenAi(document: string, query: string) {
+  const provider = createOpenAiEmbeddingProvider(
+    OPENAI_EMBEDDING_NATIVE_DIMENSION
+  );
+  console.log("\n=== OpenAI text-embedding-3-large native 3072 ===");
+  console.log(`endpoint: ${OPENAI_EMBEDDINGS_URL}`);
   console.log(`model: ${provider.model}`);
   console.log(`declared dimension: ${provider.dimension}`);
   console.log(
@@ -68,7 +65,7 @@ async function main() {
     throw new Error("eval gold is missing demo-104 / q-quiet-blue-night");
   }
   const document = buildCanonicalEmbeddingText(clip.metadataV2);
-  console.log("M5A embedding smoke: 1 clip document + 1 query per provider.");
+  console.log("M5A embedding smoke: 1 clip document + 1 query.");
   console.log(
     "This is connectivity/shape only. Do not judge retrieval quality."
   );
@@ -77,47 +74,15 @@ async function main() {
   console.log(`canonicalTextVersion: ${CANONICAL_TEXT_VERSION}`);
   console.log(`document chars: ${document.length}`);
 
-  const failures: string[] = [];
+  console.log("\n=== Qwen text-embedding-v4 ===");
+  console.log(`intended endpoint: ${QWEN_EMBEDDING_DEFAULT_URL}`);
+  console.log(`intended model: ${QWEN_EMBEDDING_MODEL}`);
+  console.log(`Qwen real smoke: ${QWEN_REAL_SMOKE_STATUS}`);
+  console.log(
+    "No Qwen request sent. No endpoint, model, or provider fallback."
+  );
 
-  try {
-    const qwen = createQwenEmbeddingProvider();
-    await smokeProvider(
-      "Qwen text-embedding-v4",
-      resolveQwenEmbeddingUrl(ENV.qwenBaseUrl, ENV.isProduction),
-      qwen,
-      document,
-      query.text
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    failures.push(`Qwen text-embedding-v4: ${message}`);
-    console.error(`SMOKE FAILED Qwen text-embedding-v4: ${message}`);
-  }
-
-  try {
-    const openai = createOpenAiEmbeddingProvider(
-      OPENAI_EMBEDDING_NATIVE_DIMENSION
-    );
-    await smokeProvider(
-      "OpenAI text-embedding-3-large native 3072",
-      OPENAI_EMBEDDINGS_URL,
-      openai,
-      document,
-      query.text
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    failures.push(`OpenAI text-embedding-3-large: ${message}`);
-    console.error(`SMOKE FAILED OpenAI text-embedding-3-large: ${message}`);
-  }
-
-  if (failures.length > 0) {
-    console.error("\nStopped. No model fallback was applied.");
-    for (const failure of failures) {
-      console.error(`- ${failure}`);
-    }
-    process.exit(1);
-  }
+  await smokeOpenAi(document, query.text);
 }
 
 void main();

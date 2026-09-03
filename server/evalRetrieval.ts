@@ -18,14 +18,30 @@ import {
 } from "./evalMetrics";
 import { metadataV2ToLegacy, rankFootage, type FootageClip } from "./footage";
 import { rrfFuse } from "./rrf";
-import type { EmbeddingProvider } from "./_core/embeddingProvider";
+import {
+  embeddingIndexKey,
+  type EmbeddingProvider,
+} from "./_core/embeddingProvider";
 import {
   createFakeEmbeddingProvider,
   FAKE_PROVIDER_DISCLAIMER,
 } from "./_core/fakeEmbeddingProvider";
+import {
+  OPENAI_EMBEDDING_MODEL,
+  OPENAI_EMBEDDING_NATIVE_DIMENSION,
+  OPENAI_EMBEDDING_PROVIDER_ID,
+} from "./_core/openaiEmbeddingProvider";
+import {
+  QWEN_EMBEDDING_PROVIDER_ID,
+  QWEN_REAL_SMOKE_STATUS,
+} from "./_core/qwenEmbeddingProvider";
 
 export const HARNESS_NOTE =
   "Metrics validate the harness pipeline. They are not retrieval-quality evidence.";
+export const REAL_VECTOR_HARNESS_DISCLAIMER =
+  "openai real vectors — harness validation only; not a quality benchmark";
+export const REAL_VECTOR_HARNESS_NOTE =
+  "Real OpenAI vectors validate harness wiring only. They are not retrieval-quality evidence and must not choose a production model.";
 export const A0_EVAL_NOTE =
   "A0 evaluation excludes zero-score fallback results";
 
@@ -66,14 +82,15 @@ export type QueryEvalResult = {
 };
 
 export type OfflineEvalReport = {
-  disclaimer: typeof FAKE_PROVIDER_DISCLAIMER;
-  note: typeof HARNESS_NOTE;
+  disclaimer: string;
+  note: string;
   a0EvalNote: typeof A0_EVAL_NOTE;
   provider: {
     id: string;
     model: string;
     dimension: number;
   };
+  indexKey: string;
   canonicalTextVersion: typeof CANONICAL_TEXT_VERSION;
   clipCount: number;
   queryCount: number;
@@ -81,6 +98,25 @@ export type OfflineEvalReport = {
   byCategory: Record<EvalQueryCategory, SystemMetrics>;
   queries: QueryEvalResult[];
 };
+
+function assertHarnessProvider(provider: EmbeddingProvider) {
+  if (provider.id === "fake") return "fake" as const;
+  if (
+    provider.id === OPENAI_EMBEDDING_PROVIDER_ID &&
+    provider.model === OPENAI_EMBEDDING_MODEL &&
+    provider.dimension === OPENAI_EMBEDDING_NATIVE_DIMENSION
+  ) {
+    return "openai" as const;
+  }
+  if (provider.id === QWEN_EMBEDDING_PROVIDER_ID) {
+    throw new Error(
+      `Qwen real-vector harness is ${QWEN_REAL_SMOKE_STATUS}. No endpoint, model, or provider fallback.`
+    );
+  }
+  throw new Error(
+    "This M5A harness batch only runs the fake EmbeddingProvider or OpenAI text-embedding-3-large native 3072"
+  );
+}
 
 function evalClipToFootageClip(clip: EvalClip, numericId: number): FootageClip {
   return {
@@ -141,11 +177,12 @@ export async function runOfflineRetrievalEval(options: {
   provider: EmbeddingProvider;
 }): Promise<OfflineEvalReport> {
   const { gold, provider } = options;
-  if (provider.id !== "fake") {
-    throw new Error(
-      "This M5A harness batch only runs the fake EmbeddingProvider"
-    );
-  }
+  const harnessMode = assertHarnessProvider(provider);
+  const disclaimer =
+    harnessMode === "fake"
+      ? FAKE_PROVIDER_DISCLAIMER
+      : REAL_VECTOR_HARNESS_DISCLAIMER;
+  const note = harnessMode === "fake" ? HARNESS_NOTE : REAL_VECTOR_HARNESS_NOTE;
 
   const footageClips = gold.clips.map((clip, index) =>
     evalClipToFootageClip(clip, index + 1)
@@ -238,14 +275,15 @@ export async function runOfflineRetrievalEval(options: {
   ) as OfflineEvalReport["byCategory"];
 
   return {
-    disclaimer: FAKE_PROVIDER_DISCLAIMER,
-    note: HARNESS_NOTE,
+    disclaimer,
+    note,
     a0EvalNote: A0_EVAL_NOTE,
     provider: {
       id: provider.id,
       model: provider.model,
       dimension: provider.dimension,
     },
+    indexKey: embeddingIndexKey(provider, CANONICAL_TEXT_VERSION),
     canonicalTextVersion: CANONICAL_TEXT_VERSION,
     clipCount: gold.clips.length,
     queryCount: gold.queries.length,
@@ -267,23 +305,25 @@ function formatHits(ids: string[]) {
 }
 
 export function formatEvalReport(report: OfflineEvalReport): string {
+  const wiringOnly = "harness validation only";
   const lines = [
     "Framefind M5A offline retrieval eval",
     report.disclaimer,
     report.note,
     report.a0EvalNote,
     `provider: ${report.provider.id} / ${report.provider.model} / dim=${report.provider.dimension}`,
+    `index key: ${report.indexKey}`,
     `canonicalTextVersion: ${report.canonicalTextVersion}`,
     `clips: ${report.clipCount}  queries: ${report.queryCount}`,
     "",
-    "Overall (fake embedding numbers are harness validation only)",
+    `Overall (${wiringOnly})`,
     `  A0 current lexical                      ${formatMetricSet(report.overall.A0)}`,
     `  A1 eval-only multilingual lexical       ${formatMetricSet(report.overall.A1)}`,
-    `  B0 fake embedding                       ${formatMetricSet(report.overall.B0)}`,
-    `  C0 A0 + fake RRF                        ${formatMetricSet(report.overall.C0)}`,
-    `  C1 A1 + fake RRF                        ${formatMetricSet(report.overall.C1)}`,
+    `  B0 embedding                            ${formatMetricSet(report.overall.B0)}`,
+    `  C0 A0 + embedding RRF                   ${formatMetricSet(report.overall.C0)}`,
+    `  C1 A1 + embedding RRF                   ${formatMetricSet(report.overall.C1)}`,
     "",
-    "By category (fake embedding numbers are harness validation only)",
+    `By category (${wiringOnly})`,
   ];
 
   for (const category of EVAL_QUERY_CATEGORIES) {
@@ -296,10 +336,7 @@ export function formatEvalReport(report: OfflineEvalReport): string {
     lines.push(`    C1  ${formatMetricSet(slice.C1)}`);
   }
 
-  lines.push(
-    "",
-    "Per query (top 5; fake embedding numbers are harness validation only)"
-  );
+  lines.push("", `Per query (top 5; ${wiringOnly})`);
   for (const query of report.queries) {
     lines.push(`  [${query.queryId}] ${query.text}`);
     lines.push(
