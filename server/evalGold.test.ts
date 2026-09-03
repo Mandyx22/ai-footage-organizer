@@ -158,4 +158,62 @@ describe("M5A eval gold harness", () => {
       )
     ).toThrow(/semanticCategories\[0\] is invalid/);
   });
+
+  it("rejects unsupported queryLanguage/languageRelation combinations at parse time", () => {
+    const gold = loadExampleEvalGold();
+    const extraJudgments = [{ clipId: gold.clips[0]!.id, grade: 1 as const }];
+    expect(() =>
+      parseEvalGold(
+        {
+          version: EVAL_GOLD_VERSION,
+          clips: gold.clips,
+        },
+        {
+          version: EVAL_GOLD_VERSION,
+          purpose: gold.purpose,
+          queries: [
+            ...gold.queries,
+            {
+              id: "q-en-cross-lingual-unsupported",
+              text: "english query against chinese metadata later",
+              queryLanguage: "en",
+              languageRelation: "cross-lingual",
+              semanticCategories: ["exact-factual"],
+              judgments: extraJudgments,
+            },
+          ],
+        }
+      )
+    ).toThrow(
+      /unsupported language combination: queryLanguage=en languageRelation=cross-lingual/
+    );
+    expect(() =>
+      parseEvalGold(
+        {
+          version: EVAL_GOLD_VERSION,
+          clips: gold.clips,
+        },
+        {
+          version: EVAL_GOLD_VERSION,
+          purpose: gold.purpose,
+          queries: [
+            ...gold.queries,
+            {
+              id: "q-mixed-same-language-unsupported",
+              text: "mixed query marked same-language later",
+              queryLanguage: "mixed",
+              languageRelation: "same-language",
+              semanticCategories: ["editing-intent"],
+              judgments: extraJudgments,
+            },
+          ],
+        }
+      )
+    ).toThrow(
+      /unsupported language combination: queryLanguage=mixed languageRelation=same-language/
+    );
+    expect(gold.queries.map(query => languageSliceFor(query))).not.toContain(
+      null
+    );
+  });
 });

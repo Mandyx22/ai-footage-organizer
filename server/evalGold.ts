@@ -69,6 +69,11 @@ export type EvalQuery = {
   id: string;
   text: string;
   queryLanguage: EvalQueryLanguage;
+  /**
+   * Language relation between the query language and the intended relevant
+   * searchable metadata evidence. Not UI language, and not a requirement that
+   * the entire Metadata V2 object use one language.
+   */
   languageRelation: EvalLanguageRelation;
   semanticCategories: EvalSemanticCategory[];
   judgments: EvalJudgment[];
@@ -81,29 +86,27 @@ export type EvalGoldSet = {
   queries: EvalQuery[];
 };
 
+export const EVAL_LANGUAGE_SLICE_BY_COMBINATION = {
+  "en/same-language": "english-same-language",
+  "zh/same-language": "chinese-same-language",
+  "zh/cross-lingual": "chinese-cross-lingual",
+  "mixed/cross-lingual": "mixed-language",
+} as const;
+
 export function languageSliceFor(
   query: Pick<EvalQuery, "queryLanguage" | "languageRelation">
-): EvalLanguageSlice | null {
-  if (query.queryLanguage === "mixed") return "mixed-language";
-  if (
-    query.queryLanguage === "en" &&
-    query.languageRelation === "same-language"
-  ) {
-    return "english-same-language";
+): EvalLanguageSlice {
+  const key = `${query.queryLanguage}/${query.languageRelation}`;
+  const slice =
+    EVAL_LANGUAGE_SLICE_BY_COMBINATION[
+      key as keyof typeof EVAL_LANGUAGE_SLICE_BY_COMBINATION
+    ];
+  if (!slice) {
+    throw new Error(
+      `unsupported language combination: queryLanguage=${query.queryLanguage} languageRelation=${query.languageRelation}`
+    );
   }
-  if (
-    query.queryLanguage === "zh" &&
-    query.languageRelation === "same-language"
-  ) {
-    return "chinese-same-language";
-  }
-  if (
-    query.queryLanguage === "zh" &&
-    query.languageRelation === "cross-lingual"
-  ) {
-    return "chinese-cross-lingual";
-  }
-  return null;
+  return slice;
 }
 
 const GOLD_DIR = path.resolve(
@@ -293,19 +296,27 @@ function parseQuery(value: unknown, index: number): EvalQuery {
     semanticCategories.length > 0,
     `${path}.semanticCategories must not be empty`
   );
+  const queryLanguage = isOneOf(
+    query.queryLanguage,
+    EVAL_QUERY_LANGUAGES,
+    `${path}.queryLanguage`
+  );
+  const languageRelation = isOneOf(
+    query.languageRelation,
+    EVAL_LANGUAGE_RELATIONS,
+    `${path}.languageRelation`
+  );
+  try {
+    languageSliceFor({ queryLanguage, languageRelation });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`${path}: ${detail}`);
+  }
   return {
     id: asString(query.id, `${path}.id`),
     text: asString(query.text, `${path}.text`),
-    queryLanguage: isOneOf(
-      query.queryLanguage,
-      EVAL_QUERY_LANGUAGES,
-      `${path}.queryLanguage`
-    ),
-    languageRelation: isOneOf(
-      query.languageRelation,
-      EVAL_LANGUAGE_RELATIONS,
-      `${path}.languageRelation`
-    ),
+    queryLanguage,
+    languageRelation,
     semanticCategories,
     judgments: query.judgments.map((judgment, judgmentIndex) =>
       parseJudgment(judgment, `${path}.judgments[${judgmentIndex}]`)

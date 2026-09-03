@@ -74,7 +74,7 @@ export type QueryEvalResult = {
   text: string;
   queryLanguage: string;
   languageRelation: string;
-  languageSlice: EvalLanguageSlice | null;
+  languageSlice: EvalLanguageSlice;
   semanticCategories: EvalSemanticCategory[];
   A0: { ranking: LexicalRankedHit[]; metrics: MetricSet };
   A1: { ranking: LexicalRankedHit[]; metrics: MetricSet };
@@ -361,7 +361,7 @@ export function formatEvalReport(report: OfflineEvalReport): string {
   lines.push("", `Per query (top 5; ${wiringOnly})`);
   for (const query of report.queries) {
     lines.push(
-      `  [${query.queryId}] ${query.text}  lang=${query.queryLanguage} relation=${query.languageRelation} slice=${query.languageSlice ?? "none"}`
+      `  [${query.queryId}] ${query.text}  lang=${query.queryLanguage} relation=${query.languageRelation} slice=${query.languageSlice}`
     );
     lines.push(
       `    A0  ${formatMetricSet(query.A0.metrics)}  hits=${formatHits(
