@@ -102,3 +102,41 @@ export function meanMetricSet(sets: MetricSet[]): MetricSet {
     ndcgAt10: total.ndcgAt10 / sets.length,
   };
 }
+
+export type CalibrationMetricSet = {
+  successAt5: number;
+  precisionAt5: number;
+  ndcgAt10: number;
+  pilotCorpusRecallAt10Diagnostic?: number;
+};
+
+export function precisionAtK(
+  rankedIds: string[],
+  relevantIds: Set<string>,
+  k: number
+): number {
+  if (k <= 0) throw new Error("k must be positive");
+  const hits = rankedIds.slice(0, k).filter(id => relevantIds.has(id)).length;
+  return hits / k;
+}
+
+export function calibrationMetricsForRanking(
+  rankedIds: string[],
+  judgments: Array<{ clipId: string; grade: number }>,
+  options?: { includePilotCorpusRecallAt10Diagnostic?: boolean }
+): CalibrationMetricSet {
+  const relevant = new Set(
+    judgments
+      .filter(judgment => judgment.grade >= 2)
+      .map(judgment => judgment.clipId)
+  );
+  const metrics: CalibrationMetricSet = {
+    successAt5: successAtK(rankedIds, relevant, 5),
+    precisionAt5: precisionAtK(rankedIds, relevant, 5),
+    ndcgAt10: ndcgAtK(rankedIds, gradeMap(judgments), 10),
+  };
+  if (options?.includePilotCorpusRecallAt10Diagnostic) {
+    metrics.pilotCorpusRecallAt10Diagnostic = recallAtK(rankedIds, relevant, 10);
+  }
+  return metrics;
+}
