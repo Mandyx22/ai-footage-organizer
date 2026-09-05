@@ -3,7 +3,20 @@ import {
   buildCanonicalEmbeddingText,
   CANONICAL_TEXT_VERSION,
 } from "./canonicalText";
+import * as canonicalText from "./canonicalText";
 import { DEMO_CLIPS, type ClipMetadataV2 } from "./footage";
+
+function requireCanonicalEmbeddingContentValues(): (
+  metadata: ClipMetadataV2
+) => string[] {
+  const fn = (
+    canonicalText as {
+      canonicalEmbeddingContentValues?: (metadata: ClipMetadataV2) => string[];
+    }
+  ).canonicalEmbeddingContentValues;
+  expect(typeof fn).toBe("function");
+  return fn!;
+}
 
 function metadataV2(
   overrides: Partial<{
@@ -158,5 +171,83 @@ describe("buildCanonicalEmbeddingText", () => {
         expect(text).not.toContain(note);
       }
     }
+  });
+});
+
+describe("canonicalEmbeddingContentValues (shared semantic-v1 primitive)", () => {
+  it("exports included content values without field labels under the same omit rules", () => {
+    const meta = metadataV2({
+      weather: ["unknown"],
+      environmentType: "unknown",
+      spatialRelationships: [],
+      atmosphere: ["  unknown  "],
+      sceneInterpretation: "",
+      uncertainty: ["secret uncertainty token zxqomitunc"],
+      editingUses: ["opening beat"],
+    });
+
+    const values = requireCanonicalEmbeddingContentValues()(meta);
+    expect(values).toEqual(
+      expect.arrayContaining([
+        meta.description,
+        "one person, lake, sunset",
+        "person, lake",
+        "sitting still",
+        "lakeside",
+        "alone",
+        "still",
+        "sparse",
+        "sunset",
+        "golden hour, soft",
+        "gold, blue",
+        "medium-wide",
+        "likely static",
+        "quiet, reflective",
+        "opening beat",
+      ])
+    );
+    expect(values.join(" ")).not.toMatch(/solitary lakeside pause/i);
+    expect(values.some(value => /\bunknown\b/i.test(value))).toBe(false);
+    expect(values.join(" ")).not.toMatch(/zxqomitunc/i);
+    expect(values.join(" ")).not.toMatch(/outdoor/i);
+    expect(values.join(" ")).not.toMatch(/intimate/i);
+    for (const value of values) {
+      expect(value).not.toMatch(
+        /^(Description|Visible facts|Subjects|Mood|Atmosphere|Scene interpretation|Editing uses):/i
+      );
+    }
+
+    const rendered = buildCanonicalEmbeddingText(meta);
+    for (const value of values) {
+      expect(rendered).toContain(value);
+    }
+    expect(rendered).not.toMatch(/Uncertainty:/i);
+    expect(rendered).not.toMatch(/zxqomitunc/i);
+    expect(rendered).not.toContain("Weather:");
+    expect(rendered).not.toContain("Environment:");
+    expect(rendered).not.toContain("Composition:");
+    expect(rendered).not.toContain("Atmosphere:");
+  });
+
+  it("keeps description/observed/interpretation mood+atmosphere+sceneInterpretation/creative editingUses only", () => {
+    const meta = metadataV2({
+      description: "shared canon description token",
+      mood: ["sharedmoodtoken"],
+      atmosphere: ["sharedatmotoken"],
+      sceneInterpretation: "sharedscenetoken",
+      editingUses: ["sharededittoken"],
+      uncertainty: ["must-not-appear-in-values"],
+    });
+    const values = requireCanonicalEmbeddingContentValues()(meta);
+    const joined = values.join("\n");
+    expect(joined).toContain("shared canon description token");
+    expect(joined).toContain("sharedmoodtoken");
+    expect(joined).toContain("sharedatmotoken");
+    expect(joined).toContain("sharedscenetoken");
+    expect(joined).toContain("sharededittoken");
+    expect(joined).not.toContain("must-not-appear-in-values");
+    expect(values).toEqual(
+      requireCanonicalEmbeddingContentValues()(meta)
+    );
   });
 });

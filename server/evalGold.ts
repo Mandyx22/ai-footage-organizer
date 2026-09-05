@@ -143,7 +143,7 @@ function asStringArray(value: unknown, path: string) {
   return value;
 }
 
-function parseMetadataV2(value: unknown, path: string): ClipMetadataV2 {
+export function parseMetadataV2(value: unknown, path: string): ClipMetadataV2 {
   assert(
     value !== null && typeof value === "object" && !Array.isArray(value),
     `${path} must be an object`
